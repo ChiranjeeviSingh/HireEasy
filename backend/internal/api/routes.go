@@ -1,14 +1,16 @@
 package api
 
 import (
-    "github.com/gin-gonic/gin"
-    "backend/internal/api/handlers"
+	"backend/internal/api/handlers"
+
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes(router *gin.Engine) {
-    api := router.Group("/api")
-    
-    // Authentication routes
-    api.POST("/login", handlers.Login)
-    api.POST("/register", handlers.Register)
+	api := router.Group("/api")
+
+	// Authentication routes
+	api.POST("/login", handlers.Login)
+	api.POST("/register", handlers.Register)
+	api.POST("/apply", HandleJobApplication)
 }
