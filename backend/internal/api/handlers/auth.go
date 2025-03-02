@@ -7,7 +7,7 @@ import (
 )
 
 
-func Login(ctx *gin.Context) {
+func LoginH(ctx *gin.Context) {
     var loginReq services.LoginRequest
 
     if err := ctx.ShouldBindJSON(&loginReq); err != nil {
@@ -25,7 +25,7 @@ func Login(ctx *gin.Context) {
 }
 
 
-func Register(ctx *gin.Context) {
+func RegisterH(ctx *gin.Context) {
     var registerReq services.RegisterRequest
     if err := ctx.ShouldBindJSON(&registerReq); err != nil {
         ctx.JSON(http.StatusBadRequest, gin.H{"msg": "Invalid input", "error": err.Error()})
