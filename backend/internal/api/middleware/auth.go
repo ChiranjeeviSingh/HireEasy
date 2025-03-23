@@ -7,6 +7,7 @@ import (
     "github.com/gin-gonic/gin"
     "github.com/golang-jwt/jwt/v4"
     "backend/internal/config"
+    "regexp"
 )
 
 var (
@@ -18,7 +19,7 @@ var (
 func AuthMiddleware() gin.HandlerFunc {
     return func(ctx *gin.Context) {
         // Skip auth for unauthenticated apis
-        if isPublicPath(ctx.Request.URL.Path) {
+        if isPublicPath(ctx.Request.Method, ctx.Request.URL.Path) {
             ctx.Next()
             return
         }
@@ -36,12 +37,25 @@ func AuthMiddleware() gin.HandlerFunc {
     }
 }
 
-func isPublicPath(path string) bool {
+func isPublicPath(method, path string) bool {
     publicPaths := map[string]bool{
         "/api/login":    true,
         "/api/register": true,
     }
-    return publicPaths[path]
+
+    // Check if the path exactly matches a predefined public route
+    if publicPaths[path] {
+        return true
+    }
+
+    //Handle dynamic route matching for `/api/forms/:form_uuid`, Allow only GET requests to /forms/:form_uuid as public
+    if method == http.MethodGet && strings.HasPrefix(path, "/api/forms/") {
+        uuidPattern := `^/api/forms/[a-fA-F0-9-]+$`
+        match, _ := regexp.MatchString(uuidPattern, path)
+        return match
+    }
+
+    return false
 }
 
 func validateToken(ctx *gin.Context, secret string) (int, error) {
