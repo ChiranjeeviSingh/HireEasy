@@ -50,7 +50,9 @@ export function JobApplications() {
 
   const [selectedJobId, setSelectedJobId] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [minExperience, setMinExperience] = useState(0); // Experience filter state
+  const [minExperience, setMinExperience] = useState(0);
+  const [selectedEducation, setSelectedEducation] = useState(""); // Education filter
+  const [selectedSkill, setSelectedSkill] = useState(""); // Skill filter
 
   // Handle job selection
   const handleJobChange = (e) => {
@@ -69,147 +71,181 @@ export function JobApplications() {
   // Handle experience filter selection
   const handleExperienceChange = (e) => {
     setMinExperience(Number(e.target.value));
-    setSelectedCandidate(null); // Reset candidate selection
+    setSelectedCandidate(null);
   };
 
-  // Filter candidates based on selected experience
+  // Handle education filter selection
+  const handleEducationChange = (e) => {
+    setSelectedEducation(e.target.value);
+    setSelectedCandidate(null);
+  };
+
+  // Handle skills filter selection
+  const handleSkillChange = (e) => {
+    setSelectedSkill(e.target.value);
+    setSelectedCandidate(null);
+  };
+
+  // Filter candidates based on selected criteria
   const filteredCandidates =
     selectedJobId && jobApplications[selectedJobId]
       ? jobApplications[selectedJobId].filter((candidate) => {
           const experienceYears = parseInt(
-            candidate.responses.Q_Experience.replace(/\D/g, ""), // Extract numbers from string
+            candidate.responses.Q_Experience.replace(/\D/g, ""),
             10
           );
-          return experienceYears >= minExperience;
+
+          const matchesExperience = experienceYears >= minExperience;
+          const matchesEducation =
+            selectedEducation === "" ||
+            candidate.responses.Q_Education.includes(selectedEducation);
+          const matchesSkill =
+            selectedSkill === "" ||
+            candidate.responses.Q_Skills.includes(selectedSkill);
+
+          return matchesExperience && matchesEducation && matchesSkill;
         })
       : [];
 
   return (
-    <div className="relative min-h-screen bg-gray-100 flex flex-col justify-between">
-      {/* ✅ Dashboard Button */}
+    <div
+      style={{ textAlign: "center", marginTop: "20px", position: "relative" }}
+    >
+      {/* Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        className="absolute top-4 left-4 px-4 py-2 text-lg bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+        style={{
+          position: "absolute",
+          top: "10px",
+          left: "10px",
+          padding: "5px 10px",
+          fontSize: "16px",
+          cursor: "pointer",
+        }}
       >
         ⬅️ Dashboard
       </button>
 
-      {/* ✅ Content Section (No Card, Just Structured Layout) */}
-      <div className="flex-grow flex flex-col justify-center items-center mt-12 mb-20 px-6">
-        <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
-        Job Applications
-        </h2>
+      <h2>Job Applications</h2>
 
-        {/* Job Selection */}
-        <div className="w-full max-w-lg mb-6">
-          <label className="block font-medium mb-2 text-lg">Select Job ID:</label>
-          <select
-            value={selectedJobId}
-            onChange={handleJobChange}
-            className="w-full p-3 border border-gray-500 rounded-lg text-lg focus:ring-2 focus:ring-green-400"
-          >
-            <option value="">-- Select Job ID --</option>
-            {Object.keys(jobApplications).map((jobId) => (
-              <option key={jobId} value={jobId}>
-                {jobId}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Experience Filter */}
-        {selectedJobId && (
-          <div className="w-full max-w-lg mb-6">
-            <label className="block font-medium mb-2 text-lg">
-              Filter by Experience (years):
-            </label>
-            <select
-              value={minExperience}
-              onChange={handleExperienceChange}
-              className="w-full p-3 border border-gray-500 rounded-lg text-lg focus:ring-2 focus:ring-green-400"
-            >
-              <option value="0">All Candidates</option>
-              <option value="2">Greater than 2 years</option>
-              <option value="3">Greater than 3 years</option>
-              <option value="5">Greater than 5 years</option>
-            </select>
-          </div>
-        )}
-
-        {/* Candidates List */}
-        {selectedJobId && filteredCandidates.length > 0 ? (
-          <div className="w-full max-w-lg">
-            <h3 className="text-2xl font-semibold mb-4">Candidates:</h3>
-            {filteredCandidates.map((candidate) => (
-              <button
-                key={candidate.email}
-                onClick={() => handleCandidateChange(candidate.email)}
-                className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition mb-3"
-              >
-                {candidate.name} ({candidate.email})
-              </button>
-            ))}
-          </div>
-        ) : selectedJobId ? (
-          <p className="text-xl text-gray-500">No candidates match the selected experience criteria.</p>
-        ) : null}
-
-        {/* Candidate Details */}
-        {selectedCandidate && (
-          <div className="w-full max-w-lg mt-6">
-            <h3 className="text-2xl font-semibold">Candidate Details:</h3>
-            <p className="text-lg">
-              <strong>Name:</strong> {selectedCandidate.name}
-            </p>
-            <p className="text-lg">
-              <strong>Email:</strong> {selectedCandidate.email}
-            </p>
-
-            <h3 className="text-2xl font-semibold mt-4">Submitted Responses:</h3>
-            {Object.entries(selectedCandidate.responses).map(([key, value]) => (
-              <p key={key} className="text-lg">
-                <strong>{key.replace("Q_", "").replace("_", " ")}:</strong>{" "}
-                {Array.isArray(value) ? value.join(", ") : value}
-              </p>
-            ))}
-          </div>
-        )}
+      {/* Job ID Selection */}
+      <div style={{ marginBottom: "20px" }}>
+        <label>Select Job ID: </label>
+        <select
+          value={selectedJobId}
+          onChange={handleJobChange}
+          style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+        >
+          <option value="">-- Select Job ID --</option>
+          {Object.keys(jobApplications).map((jobId) => (
+            <option key={jobId} value={jobId}>
+              {jobId}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* ✅ Footer Section (Properly Separated) */}
-      <footer className="bg-gradient-to-r from-gray-900 to-black text-white py-8 px-12">
-        <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Section */}
-          <div>
-            <h2 className="text-2xl font-bold">HireEasy</h2>
-            <p className="mt-3 text-gray-400">
-              Streamlining the hiring process with job applications, 
-              questionnaires, and AI-driven insights.
+      {/* Experience Filter Selection */}
+      {selectedJobId && (
+        <div style={{ marginBottom: "20px" }}>
+          <label>Filter by Experience (years): </label>
+          <select
+            value={minExperience}
+            onChange={handleExperienceChange}
+            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+          >
+            <option value="0">All Candidates</option>
+            <option value="2">Greater than 2 years</option>
+            <option value="3">Greater than 3 years</option>
+            <option value="5">Greater than 5 years</option>
+          </select>
+        </div>
+      )}
+
+      {/* Education Filter Selection */}
+      {selectedJobId && (
+        <div style={{ marginBottom: "20px" }}>
+          <label>Filter by Education: </label>
+          <input
+            type="text"
+            placeholder="Enter education keyword..."
+            value={selectedEducation}
+            onChange={handleEducationChange}
+            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+          />
+        </div>
+      )}
+
+      {/* Skills Filter Selection */}
+      {selectedJobId && (
+        <div style={{ marginBottom: "20px" }}>
+          <label>Filter by Skill: </label>
+          <input
+            type="text"
+            placeholder="Enter skill..."
+            value={selectedSkill}
+            onChange={handleSkillChange}
+            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+          />
+        </div>
+      )}
+
+      {/* Show Candidates if a job is selected */}
+      {selectedJobId && filteredCandidates.length > 0 ? (
+        <div style={{ marginBottom: "20px" }}>
+          <h3>Candidates:</h3>
+          {filteredCandidates.map((candidate) => (
+            <button
+              key={candidate.email}
+              onClick={() => handleCandidateChange(candidate.email)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "8px",
+                margin: "5px 0",
+                backgroundColor: "#007bff",
+                color: "white",
+                border: "none",
+                borderRadius: "5px",
+                cursor: "pointer",
+                textAlign: "left",
+              }}
+            >
+              {candidate.name} ({candidate.email})
+            </button>
+          ))}
+        </div>
+      ) : selectedJobId ? (
+        <p>No candidates match the selected criteria.</p>
+      ) : null}
+
+      {/* Show Candidate Responses if selected */}
+      {selectedCandidate && (
+        <div
+          style={{
+            marginTop: "20px",
+            textAlign: "left",
+            maxWidth: "600px",
+            margin: "auto",
+          }}
+        >
+          <h3>Candidate Details:</h3>
+          <p>
+            <strong>Name:</strong> {selectedCandidate.name}
+          </p>
+          <p>
+            <strong>Email:</strong> {selectedCandidate.email}
+          </p>
+
+          <h3>Submitted Responses:</h3>
+          {Object.entries(selectedCandidate.responses).map(([key, value]) => (
+            <p key={key}>
+              <strong>{key.replace("Q_", "").replace("_", " ")}:</strong>{" "}
+              {Array.isArray(value) ? value.join(", ") : value}
             </p>
-          </div>
-
-          {/* Office Information */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Office</h3>
-            <p>456 Talent Hub,</p>
-            <p>San Francisco, USA</p>
-            <p>Email: support@hireeasy.com</p>
-            <p>Phone: +1 987-654-3210</p>
-          </div>
-
-          {/* Useful Links */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Links</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="hover:text-gray-300 transition">Dashboard</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition">Post a Job</a></li>
-            </ul>
-          </div>
+          ))}
         </div>
-        <div className="text-center text-gray-400 mt-8">
-          HireEasy © {new Date().getFullYear()} - All Rights Reserved
-        </div>
-      </footer>
+      )}
     </div>
   );
 }
