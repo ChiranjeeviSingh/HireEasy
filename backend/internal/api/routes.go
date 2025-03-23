@@ -9,6 +9,9 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
+    
+    // add cors middleware
+	router.Use(cors.Default())
     api := router.Group("/api", middleware.AuthMiddleware())
     
     // Authentication routes
