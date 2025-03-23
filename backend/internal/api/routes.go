@@ -1,9 +1,11 @@
 package api
 
 import (
-    "github.com/gin-gonic/gin"
-    "backend/internal/api/handlers"
-    "backend/internal/api/middleware"
+	"backend/internal/api/handlers"
+	"backend/internal/api/middleware"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes(router *gin.Engine) {

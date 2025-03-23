@@ -20,20 +20,26 @@ export function Register() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
-    setTimeout(() => {
-      if (
-        email === mockUser.email &&
-        password === mockUser.password &&
-        username === mockUser.username
-      ) {
-        alert("Registration Successful! You can now log in.");
-        navigate("/"); // Redirect to login page
-      } else {
-        setError("Registration failed. Try again with correct mock details.");
+  
+     try {
+      const response = await fetch("http://localhost:8080/api/register", {
+        method: "POST",
+        body: JSON.stringify({ email, password, username }),
+      });
+      if (!response.ok) {
+        throw new Error("Registration failed");
       }
+      const data = await response.json();
+      console.log(data);
+      alert("Registration Successful! You can now log in.");
+      navigate("/"); // Redirect to login page
       setLoading(false);
-    }, 1000); // Simulated delay
+    } catch (error) {
+      setError("Registration failed. Please try again.");
+      setLoading(false);
+    }
+
+
   };
 
   return (

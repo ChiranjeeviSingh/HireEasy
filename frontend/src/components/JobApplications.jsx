@@ -50,7 +50,9 @@ export function JobApplications() {
 
   const [selectedJobId, setSelectedJobId] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState(null);
-  const [minExperience, setMinExperience] = useState(0); // Experience filter state
+  const [minExperience, setMinExperience] = useState(0);
+  const [selectedEducation, setSelectedEducation] = useState(""); // Education filter
+  const [selectedSkill, setSelectedSkill] = useState(""); // Skill filter
 
   // Handle job selection
   const handleJobChange = (e) => {
@@ -69,18 +71,39 @@ export function JobApplications() {
   // Handle experience filter selection
   const handleExperienceChange = (e) => {
     setMinExperience(Number(e.target.value));
-    setSelectedCandidate(null); // Reset candidate selection
+    setSelectedCandidate(null);
   };
 
-  // Filter candidates based on selected experience
+  // Handle education filter selection
+  const handleEducationChange = (e) => {
+    setSelectedEducation(e.target.value);
+    setSelectedCandidate(null);
+  };
+
+  // Handle skills filter selection
+  const handleSkillChange = (e) => {
+    setSelectedSkill(e.target.value);
+    setSelectedCandidate(null);
+  };
+
+  // Filter candidates based on selected criteria
   const filteredCandidates =
     selectedJobId && jobApplications[selectedJobId]
       ? jobApplications[selectedJobId].filter((candidate) => {
           const experienceYears = parseInt(
-            candidate.responses.Q_Experience.replace(/\D/g, ""), // Extract numbers from string
+            candidate.responses.Q_Experience.replace(/\D/g, ""),
             10
           );
-          return experienceYears >= minExperience;
+
+          const matchesExperience = experienceYears >= minExperience;
+          const matchesEducation =
+            selectedEducation === "" ||
+            candidate.responses.Q_Education.includes(selectedEducation);
+          const matchesSkill =
+            selectedSkill === "" ||
+            candidate.responses.Q_Skills.includes(selectedSkill);
+
+          return matchesExperience && matchesEducation && matchesSkill;
         })
       : [];
 
@@ -139,6 +162,34 @@ export function JobApplications() {
         </div>
       )}
 
+      {/* Education Filter Selection */}
+      {selectedJobId && (
+        <div style={{ marginBottom: "20px" }}>
+          <label>Filter by Education: </label>
+          <input
+            type="text"
+            placeholder="Enter education keyword..."
+            value={selectedEducation}
+            onChange={handleEducationChange}
+            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+          />
+        </div>
+      )}
+
+      {/* Skills Filter Selection */}
+      {selectedJobId && (
+        <div style={{ marginBottom: "20px" }}>
+          <label>Filter by Skill: </label>
+          <input
+            type="text"
+            placeholder="Enter skill..."
+            value={selectedSkill}
+            onChange={handleSkillChange}
+            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+          />
+        </div>
+      )}
+
       {/* Show Candidates if a job is selected */}
       {selectedJobId && filteredCandidates.length > 0 ? (
         <div style={{ marginBottom: "20px" }}>
@@ -165,7 +216,7 @@ export function JobApplications() {
           ))}
         </div>
       ) : selectedJobId ? (
-        <p>No candidates match the selected experience criteria.</p>
+        <p>No candidates match the selected criteria.</p>
       ) : null}
 
       {/* Show Candidate Responses if selected */}

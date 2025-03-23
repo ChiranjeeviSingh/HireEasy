@@ -16,16 +16,25 @@ export function Login() {
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
-      if (email === mockUser.email && password === mockUser.password) {
-        alert("Login Successful!");
-        localStorage.setItem("token", "mock-token-12345");
-        navigate("/dashboard");
-      } else {
-        setError("Invalid credentials, please try again.");
+ 
+    try {
+      const response = await fetch("http://localhost:8080/api/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        throw new Error("Login failed");
       }
+      const {token} = await response.json();
+      console.log("Token ",token);
+      alert("Login Successful!");
+      localStorage.setItem("token", token.token);
+      navigate("/dashboard");
       setLoading(false);
-    }, 1000);
+    } catch (error) {
+      setError("Invalid credentials, please try again.");
+      setLoading(false);
+    }
   };
 
   return (
