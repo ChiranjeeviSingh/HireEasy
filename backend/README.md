@@ -3,6 +3,9 @@
 ## Features
 
 - User authentication for hiring managers
+- Job Management
+- Form Template Management
+- Application Form System
 
 ## Setup Instructions
 
@@ -29,4 +32,9 @@
 5. Run the application:
    ```
    go run cmd/server/main.go
+   ```
+
+6. Run unittests:
+   ```
+   go test ./test/handlers/ -v
    ```

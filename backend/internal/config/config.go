@@ -8,7 +8,9 @@ import (
 type Config struct {
 	AWSRegion   string
 	AWSEndpoint string
+	S3Bucket    string
 	JWTSecret   string
+	TestMode    bool
 	DBConfig    postgresConfig
 }
 
@@ -43,16 +45,21 @@ var globalConfig *Config
 // }
 
 func LoadConfig() error {
+	// Load test mode from environment
+	testMode := os.Getenv("TEST_MODE") == "true" || os.Getenv("S3_TEST_MODE") == "true"
+
 	globalConfig = &Config{
-		AWSRegion:   os.Getenv("AWS_REGION"),
-		AWSEndpoint: os.Getenv("AWS_ENDPOINT"),
-		JWTSecret:   "abcdefghijklmno",
+		AWSRegion:   getEnvOrDefault("AWS_REGION", "us-east-1"),
+		AWSEndpoint: getEnvOrDefault("AWS_ENDPOINT", ""),
+		S3Bucket:    getEnvOrDefault("S3_BUCKET", "hireeasy-resumes"),
+		JWTSecret:   getEnvOrDefault("JWT_SECRET", "abcdefghijklmno"),
+		TestMode:    testMode,
 		DBConfig: postgresConfig{
-			Host:     "localhost",
-			Port:     "5432",
-			Username: "reshma",
-			Password: "postgres",
-			Dbname:   "app_db",
+			Host:     getEnvOrDefault("DB_HOST", "localhost"),
+			Port:     getEnvOrDefault("DB_PORT", "5432"),
+			Username: getEnvOrDefault("DB_USER", "reshma"),
+			Password: getEnvOrDefault("DB_PASSWORD", "postgres"),
+			Dbname:   getEnvOrDefault("DB_NAME", "app_db"),
 		},
 	}
 
@@ -71,4 +78,12 @@ func GetConfig() *Config {
 		panic("❌ ERROR: Config is not initialized. Did you forget to call LoadConfig()?")
 	}
 	return globalConfig
+}
+
+// getEnvOrDefault returns environment variable value or default if not set
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
