@@ -4,23 +4,19 @@ import { useLocation } from "react-router-dom";
 export function Apply() {
   const location = useLocation();
 
-  const [jobDetails, setJobDetails] = useState(null);
-  const [formDetails, setFormDetails] = useState(null);
+  const [applicationDetails, setApplicationDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({}); // Store user input
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
-  // Extract jobid and formid from the query parameters
+  // Extract form_uuid from URL
   const queryParams = new URLSearchParams(location.search);
-  const jobId = queryParams.get("jobid");
-  const formId = queryParams.get("formid");
+  const formUUID = queryParams.get("formid"); // Now using form_uuid
 
-  // Fetch job details and form details using jobId and formId
   useEffect(() => {
-    const fetchJobAndFormDetails = async () => {
+    const fetchApplicationDetails = async () => {
       try {
         setLoading(true);
 
@@ -29,30 +25,19 @@ export function Apply() {
           throw new Error("Authorization token is missing.");
         }
 
-        // Fetch Job Details
-        const jobResponse = await fetch(`${API_BASE}/jobs/${jobId}`, {
+        // Fetch Job and Form Details using form_uuid
+        const response = await fetch(`${API_BASE}/forms/${formUUID}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
           },
         });
-        if (!jobResponse.ok) {
-          throw new Error("Failed to fetch job details");
-        }
-        const jobData = await jobResponse.json();
-        setJobDetails(jobData);
 
-        // Fetch Form Details
-        const formResponse = await fetch(`${API_BASE}/forms/templates/${formId}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-        if (!formResponse.ok) {
-          throw new Error("Failed to fetch form details");
+        if (!response.ok) {
+          throw new Error("Failed to fetch job and form details.");
         }
-        const formData = await formResponse.json();
-        setFormDetails(formData);
 
+        const data = await response.json();
+        setApplicationDetails(data);
         setLoading(false);
       } catch (error) {
         setError(error.message);
@@ -60,14 +45,14 @@ export function Apply() {
       }
     };
 
-    if (jobId && formId) {
-      fetchJobAndFormDetails();
+    if (formUUID) {
+      fetchApplicationDetails();
     } else {
-      setError("Job ID or Form ID is missing in the URL.");
+      setError("Form ID (form_uuid) is missing in the URL.");
     }
-  }, [jobId, formId]);
+  }, [formUUID]);
 
-  // Handle form input change
+  // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => {
@@ -85,22 +70,19 @@ export function Apply() {
     });
   };
 
-  // Handle form submit
+  // Handle form submit (console log for now)
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Combine the job details and the form data to send to the backend
     const submissionData = {
-      jobDetails,
-      formDetails,
-      formData,
+      application_id: applicationDetails?.form_uuid,
+      job_id: applicationDetails?.job?.job_id,
+      form_template_id: applicationDetails?.form_template?.form_template_id,
+      responses: formData,
     };
 
-    // Log the submission data to the console
     console.log("Form Submission Data:", submissionData);
-
-    // For now, we are just logging the data in the frontend.
-    // In the future, you can send this to the backend using a POST request.
+    alert("Application Submitted! (Check Console for Details)");
   };
 
   if (loading) {
@@ -116,41 +98,33 @@ export function Apply() {
       <h2>Job Application</h2>
 
       {/* Display Job Details */}
-      {jobDetails && (
+      {applicationDetails?.job && (
         <div style={{ maxWidth: "600px", margin: "auto", textAlign: "left" }}>
           <h3>Job Details</h3>
-          <p>
-            <strong>Job ID:</strong> {jobDetails.job_id}
-          </p>
-          <p>
-            <strong>Job Title:</strong> {jobDetails.job_title}
-          </p>
-          <p>
-            <strong>Description:</strong> {jobDetails.job_description}
-          </p>
-          <p>
-            <strong>Skills Required:</strong> {jobDetails.skills_required.join(", ")}
-          </p>
+          <p><strong>Job ID:</strong> {applicationDetails.job.job_id}</p>
+          <p><strong>Job Title:</strong> {applicationDetails.job.job_title}</p>
+          <p><strong>Description:</strong> {applicationDetails.job.job_description}</p>
+          <p><strong>Skills Required:</strong> {applicationDetails.job.skills_required.join(", ")}</p>
         </div>
       )}
 
       {/* Display Form Questions */}
-      {formDetails && (
+      {applicationDetails?.form_template && (
         <div style={{ maxWidth: "600px", margin: "auto", textAlign: "left", marginTop: "20px" }}>
           <h3>Job Questionnaire</h3>
           <form onSubmit={handleSubmit}>
-            {formDetails.fields.map((question) => (
+            {applicationDetails.form_template.fields.map((question) => (
               <div key={question.question_id} style={{ marginBottom: "10px" }}>
-                <p>
-                  <strong>{question.question_text}</strong>
-                </p>
+                <p><strong>{question.question_text}</strong></p>
 
+                {/* Render inputs based on question type */}
                 {question.question_type === "text" && (
                   <input
                     type="text"
                     name={question.question_id}
                     onChange={handleInputChange}
                     value={formData[question.question_id] || ""}
+                    required
                   />
                 )}
                 {question.question_type === "radio" &&
@@ -162,8 +136,8 @@ export function Apply() {
                         value={opt}
                         onChange={handleInputChange}
                         checked={formData[question.question_id] === opt}
-                      />{" "}
-                      {opt}
+                        required
+                      /> {opt}
                     </label>
                   ))}
                 {question.question_type === "checkbox" &&
@@ -175,8 +149,7 @@ export function Apply() {
                         value={opt}
                         onChange={handleInputChange}
                         checked={(formData[question.question_id] || []).includes(opt)}
-                      />{" "}
-                      {opt}
+                      /> {opt}
                     </label>
                   ))}
                 {question.question_type === "file" && (
@@ -184,6 +157,7 @@ export function Apply() {
                     type="file"
                     name={question.question_id}
                     onChange={handleInputChange}
+                    required
                   />
                 )}
               </div>
@@ -200,6 +174,3 @@ export function Apply() {
 }
 
 export default Apply;
-
-
-// http://localhost:3000/apply?jobid=ceqc&formid=456 example URL which works.
