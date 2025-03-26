@@ -8,44 +8,49 @@ export function Register() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Mock registration (replace with actual API call in future)
-  const mockUser = {
-    email: "abcd@gmail.com",
-    password: "abcdef567",
-    username: "melissa",
-  };
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-  
-     try {
-      const response = await fetch("http://localhost:8080/api/register", {
+    setSuccess("");
+
+    try {
+      const response = await fetch(`${API_BASE}/register`, {
         method: "POST",
-        body: JSON.stringify({ email, password, username }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+        }),
       });
-      if (!response.ok) {
-        throw new Error("Registration failed");
-      }
+
       const data = await response.json();
-      console.log(data);
-      alert("Registration Successful! You can now log in.");
-      navigate("/"); // Redirect to login page
-      setLoading(false);
-    } catch (error) {
-      setError("Registration failed. Please try again.");
+
+      if (!response.ok) {
+        throw new Error(data.msg || "Registration failed");
+      }
+
+      setSuccess("Registration successful! You can now log in.");
+      setTimeout(() => navigate("/"), 1500); // Redirect to login after success
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
     }
-
-
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h2>Sign Up</h2>
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {success && <p style={{ color: "green" }}>{success}</p>}
       <form onSubmit={handleRegister}>
         <input
           type="text"
@@ -89,7 +94,7 @@ export function Register() {
   );
 }
 
-// Styles (copied from Login.jsx)
+// Styles (unchanged from original)
 const inputStyle = {
   width: "250px",
   padding: "10px",
