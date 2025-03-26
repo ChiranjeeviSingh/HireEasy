@@ -477,10 +477,10 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
 	
-	// Create form values with invalid user_id
+	// Create form values with invalid user_id format (not a number)
 	formValues := map[string]string{
 		"job_id":    "5678",
-		"user_id":   "0", // Invalid user_id (zero)
+		"user_id":   "not-a-number", // Invalid user_id format
 		"username":  "Invalid ID User",
 		"email":     "invalid_id@example.com",
 		"form_data": `{"experience":"3 years", "location":"Remote", "skills":["Go"]}`,
@@ -501,7 +501,7 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
 	testRouter.ServeHTTP(recorder, req)
 
-	// Assert response - should fail with invalid user ID or binding error
+	// Assert response - should fail with invalid user ID format
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
 	
 	// Parse response body
@@ -509,13 +509,58 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	
-	// Check for error message (can be either "Invalid User ID" or related to binding)
+	// Check for error message about invalid format
 	assert.Contains(t, response, "error")
-	// Either binding error or specific error message is acceptable
 	errorMsg, ok := response["error"].(string)
 	assert.True(t, ok, "Error message should be a string")
-	assert.True(t, errorMsg == "Invalid User ID" || errorMsg == "Invalid submission data", 
-		"Error message should be either 'Invalid User ID' or 'Invalid submission data', got: %s", errorMsg)
+	assert.Equal(t, "Invalid User ID format", errorMsg)
+}
+
+// Add a new test for the case where user_id is not provided (should now be valid)
+func TestHandleFormSubmission_MissingUserID(t *testing.T) {
+	// Set up a valid form UUID
+	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
+	
+	// Create form values without user_id
+	formValues := map[string]string{
+		"job_id":    "5678",
+		// No user_id provided
+		"username":  "No User ID",
+		"email":     "no_userid@example.com",
+		"form_data": `{"experience":"3 years", "location":"Remote", "skills":["Go"]}`,
+	}
+
+	// Create test request
+	req, err := createTestMultipartRequest(t, "/api/forms/"+formUUID+"/submit", formValues, "resume", "test_resume.pdf")
+	assert.NoError(t, err)
+
+	// Set URL parameter
+	req.URL.Path = "/api/forms/" + formUUID + "/submit"
+	
+	// Add test header to avoid actual S3 uploads
+	req.Header.Set("X-Test-Mode", "true")
+
+	// Create recorder and serve request
+	recorder := httptest.NewRecorder()
+	
+	// Create router with route
+	testRouter := gin.Default()
+	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
+	testRouter.ServeHTTP(recorder, req)
+
+	// Assert response - should succeed
+	assert.Equal(t, http.StatusOK, recorder.Code)
+	
+	// Parse response body
+	var response map[string]interface{}
+	err = json.Unmarshal(recorder.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	
+	// Verify success message and that an ID was generated
+	assert.Contains(t, response, "message")
+	assert.Equal(t, "Application submitted successfully", response["message"])
+	assert.Contains(t, response, "id")
+	assert.Contains(t, response, "ats_score")
 }
 
 // New test cases to improve coverage
