@@ -27,7 +27,7 @@ CREATE TABLE jobs (
     attributes JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    );
 
 -- Job submissions table (for applicants, no user account needed)
 CREATE TABLE job_submissions (
@@ -45,10 +45,10 @@ CREATE TABLE job_submissions (
 );
 
 -- Add indexes for better query performance
-CREATE INDEX idx_jobs_user_id ON jobs(user_id);
-CREATE INDEX idx_jobs_id ON jobs(job_id);
-CREATE INDEX idx_jobs_status ON jobs(job_status);
-CREATE INDEX idx_jobs_title ON jobs(job_title);
+    CREATE INDEX idx_jobs_user_id ON jobs(user_id);
+    CREATE INDEX idx_jobs_id ON jobs(job_id);
+    CREATE INDEX idx_jobs_status ON jobs(job_status);
+    CREATE INDEX idx_jobs_title ON jobs(job_title);
 CREATE INDEX idx_job_submissions_job ON job_submissions(job_id);
 CREATE INDEX idx_job_submissions_score ON job_submissions(ats_score DESC);
 CREATE INDEX idx_job_submissions_status ON job_submissions(status);

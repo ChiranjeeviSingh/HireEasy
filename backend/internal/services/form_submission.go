@@ -1,7 +1,6 @@
 package services
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -11,14 +10,15 @@ import (
 	"backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
 
 type FormSubmissionService struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewFormSubmissionService(db *sql.DB) *FormSubmissionService {
+func NewFormSubmissionService(db *sqlx.DB) *FormSubmissionService {
 	return &FormSubmissionService{db: db}
 }
 
@@ -70,7 +70,7 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 		if submission.Resume == nil {
 			return nil, fmt.Errorf("resume file is required")
 		}
-		resumeURL, err = UploadResumeToS3(submission.Resume, submission.Username)
+		resumeURL, err = UploadResumeToS3(submission.Resume, 0, submission.Username)
 		if err != nil {
 			log.Printf("Failed to upload resume: %v", err)
 			return nil, fmt.Errorf("failed to upload resume: %v", err)

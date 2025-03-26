@@ -19,6 +19,9 @@ func UploadResumeToS3(file *multipart.FileHeader, userID int, username string) (
 	// Check for test mode first
 	testMode := os.Getenv("TEST_MODE") == "true" || os.Getenv("S3_TEST_MODE") == "true"
 	
+	log.Printf("DEBUG - Environment TEST_MODE: %s, S3_TEST_MODE: %s", os.Getenv("TEST_MODE"), os.Getenv("S3_TEST_MODE"))
+	log.Printf("DEBUG - Is test mode: %t", testMode)
+	
 	// Get AWS configuration
 	awsRegion := os.Getenv("AWS_REGION")
 	if awsRegion == "" {
@@ -81,7 +84,6 @@ func UploadResumeToS3(file *multipart.FileHeader, userID int, username string) (
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(s3Path),
 		Body:   bytes.NewReader(buf.Bytes()),
-		ACL:    aws.String("public-read"), // Ensures file is accessible
 	}
 	log.Printf("Debug - PutObjectInput: Bucket=%s, Key=%s", *putObjectInput.Bucket, *putObjectInput.Key)
 	
