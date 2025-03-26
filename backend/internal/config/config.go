@@ -1,7 +1,7 @@
 package config
 
 import (
-    "os"
+	"os"
 )
 
 type Config struct {
@@ -29,9 +29,9 @@ func LoadConfig() error {
         DBConfig: postgresConfig{
             Host: "localhost",
             Port: "5432",
-            Username: "reshma",
-            Password: "postgres",
-            Dbname: "app_db",
+            Username: "postgres",
+            Password: "123456",
+            Dbname: "go_db",
         },
     }
     return nil
