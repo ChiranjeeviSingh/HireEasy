@@ -9,61 +9,78 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const mockUser = { email: "abcd@gmail.com", password: "abcdef567" };
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
- 
     try {
-      const response = await fetch("http://localhost:8080/api/login", {
+      const response = await fetch(`${API_BASE}/login`, {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
+
+      const data = await response.json();
+      console.log("Response Data:", data); // Log the entire response data
+
       if (!response.ok) {
-        throw new Error("Login failed");
+        throw new Error(data.msg || "Invalid credentials, please try again.");
       }
-      const {token} = await response.json();
-      console.log("Token ",token);
+
+      // Store the correct token (from the nested token object)
+      localStorage.setItem("token", data.token.token); // Corrected token storage
+
       alert("Login Successful!");
-      localStorage.setItem("token", token.token);
       navigate("/dashboard");
-      setLoading(false);
-    } catch (error) {
-      setError("Invalid credentials, please try again.");
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div
-      className="relative min-h-screen flex justify-center items-center bg-cover bg-center"
+      className="container main-wrapper"
       style={{
-        backgroundImage:
-          "url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8am9iJTIwcG9ydGFsfGVufDB8fDB8fHww')",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
       }}
     >
-      {/* ✅ Login Card Centered */}
-      <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-10 w-full max-w-md text-center">
-        {/* ✅ HireEasy Title Styled with Tailwind */}
-        <h1 className="text-4xl logo font-bold text-gray-800 tracking-wide font-sans mb-4">
-          HireEasy
-        </h1>
-
-        <p className="text-gray-600">
-          Sign in and start hiring the best talent out there.
-        </p>
-
-        <form onSubmit={handleLogin} className="mt-6">
-          {error && <p className="text-red-500 mb-3">{error}</p>}
-
-          {/* Email Input */}
-          <div className="mb-4">
+      <div
+        className="login-page"
+        style={{
+          width: "40%",
+          maxWidth: "900px",
+          padding: "50px",
+          borderRadius: "10px",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+          backgroundColor: "#fff",
+          textAlign: "center",
+        }}
+      >
+        <h1 className="logo">HireEasy</h1>
+        <div className="my-3">
+          <h2>Welcome to Careerbuilder</h2>
+          <p>Sign in and start hiring the best talent out there.</p>
+        </div>
+        <form onSubmit={handleLogin}>
+          {error && <p className="error-text">{error}</p>}
+          <div className="form-group">
             <input
               id="email"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="form-control"
               type="email"
               placeholder="Enter your email"
               value={email}
@@ -71,12 +88,10 @@ export function Login() {
               required
             />
           </div>
-
-          {/* Password Input */}
-          <div className="mb-4">
+          <div className="form-group">
             <input
               id="password"
-              className="w-full p-3 border border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-400"
+              className="form-control"
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -84,25 +99,18 @@ export function Login() {
               required
             />
           </div>
-
-          {/* Sign-In Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+            className="auth-button btn-block my-2"
+            style={{ width: "100%" }}
             disabled={loading}
           >
             {loading ? "Logging in..." : "Sign In"}
           </button>
         </form>
-
-        {/* Register Link */}
-        <div className="mt-4 text-gray-600">
+        <div className="text-center">
           Don't have an account?{" "}
-          <a
-            href="#"
-            onClick={() => navigate("/register")}
-            className="text-blue-500"
-          >
+          <a href="#" onClick={() => navigate("/register")}>
             Create One Now
           </a>
         </div>
