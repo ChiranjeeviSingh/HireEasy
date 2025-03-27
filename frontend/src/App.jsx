@@ -8,6 +8,7 @@ import ShareJob from "./components/ShareJob.jsx";
 import JobApplications from "./components/JobApplications.jsx";
 import ViewJobs from "./components/ViewJobs.jsx"; // New import
 import Register from "./components/Register.jsx";
+import Apply from './components/Apply';  // Adjust the path to where Apply.jsx is located
 
 console.log("App.jsx is rendering...");
 
@@ -23,6 +24,7 @@ export function App() {
         <Route path="/share-job" element={<ShareJob />} />
         <Route path="/job-applications" element={<JobApplications />} />
         <Route path="/view-jobs" element={<ViewJobs />} /> {/* New Route */}
+        <Route path="/apply" element={<Apply />} />
       </Routes>
     </div>
   );
