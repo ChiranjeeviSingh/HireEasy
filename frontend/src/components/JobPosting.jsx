@@ -8,8 +8,8 @@ export function JobPosting() {
   const initialState = {
     JobID: "", // Separate Job ID
     Info1: "", // Job Location
-    Info2: "", // Job Description
-    Info3: "", // Salary
+    Info2: "", // Job Title
+    Info3: "", // Job Description
     Info4: "", // Experience Required
     Info5: "", // Skills Required
     Info6: "",
@@ -21,10 +21,10 @@ export function JobPosting() {
 
   const placeholders = {
     Info1: "Enter Job Location",
-    Info2: "Enter Job Description",
-    Info3: "Enter Salary Details",
+    Info2: "Enter Job Title",
+    Info3: "Enter Job Description",
     Info4: "Enter Experience Required",
-    Info5: "Skills Required",
+    Info5: "Skills Required (comma-separated, e.g., Go, JavaScript, Python)",
     Info6: "Additional Info",
     Info7: "Additional Info",
     Info8: "Additional Info",
@@ -61,14 +61,15 @@ export function JobPosting() {
 
     // Map frontend fields to backend structure (correct field names as in the backend model)
     const jobDataMapped = {
-      job_id: jobData.JobID.trim(), // map to `job_id`
-      job_title: jobData.Info2.trim(), // map to `job_title`
-      job_description: jobData.Info3.trim(), // map to `job_description`
-      job_status: "Open", // map to `job_status`
-      skills_required: jobData.Info5.trim() || "EMPTY", // skills_required as a string
-      location: jobData.Info1.trim() || "EMPTY", // location as string or "EMPTY"
-      experience: jobData.Info4.trim() || "EMPTY", // experience as string or "EMPTY"
-      // Pack Info6 to Info10, if empty, send "EMPTY"
+      job_id: jobData.JobID.trim(),
+      job_title: jobData.Info2.trim(),
+      job_description: jobData.Info3.trim(),
+      job_status: "Open",
+      skills_required: jobData.Info5.trim()
+        ? jobData.Info5.split(",").map(skill => skill.trim()) // Convert to array
+        : [],
+      location: jobData.Info1.trim() || "EMPTY",
+      experience: jobData.Info4.trim() || "EMPTY",
       info6: jobData.Info6.trim() || "EMPTY",
       info7: jobData.Info7.trim() || "EMPTY",
       info8: jobData.Info8.trim() || "EMPTY",
@@ -76,7 +77,6 @@ export function JobPosting() {
       info10: jobData.Info10.trim() || "EMPTY",
     };
 
-    // Log the mapped data to see if everything is correctly formatted
     console.log("Mapped Job Data:", jobDataMapped);
 
     // Check if all required fields are valid
@@ -86,7 +86,7 @@ export function JobPosting() {
       !jobDataMapped.job_description ||
       !jobDataMapped.location ||
       !jobDataMapped.experience ||
-      !jobDataMapped.skills_required
+      jobDataMapped.skills_required.length === 0
     ) {
       setError("Please fill in all required fields and provide at least one skill.");
       console.log("Validation failed. Missing required fields.");
@@ -101,12 +101,12 @@ export function JobPosting() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`, // Attach JWT token
         },
-        body: JSON.stringify(jobDataMapped), // Sending the corrected mapped data
+        body: JSON.stringify(jobDataMapped),
       });
 
       const data = await response.json();
 
-      console.log("Response Data:", data); // Log the response from the backend (frontend logging)
+      console.log("Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.msg || "Failed to create job posting.");
@@ -114,7 +114,6 @@ export function JobPosting() {
 
       setSuccess(`Job with ID "${data.jobId}" created successfully!`);
       setFormSubmitted(true);
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -158,7 +157,7 @@ export function JobPosting() {
         onSubmit={handleSubmit}
         style={{ maxWidth: "600px", margin: "auto" }}
       >
-        {/* Separate Job ID Field */}
+        {/* Job ID Field */}
         <div style={{ marginBottom: "10px" }}>
           <label>Job ID (Required): </label>
           <input
@@ -172,7 +171,7 @@ export function JobPosting() {
           />
         </div>
 
-        {/* Job Fields (Info1 - Info5 always visible) */}
+        {/* Job Fields */}
         {["Info1", "Info2", "Info3", "Info4", "Info5"].map((key, index) => (
           <div key={index} style={{ marginBottom: "10px" }}>
             <label>{placeholders[key]}:</label>
