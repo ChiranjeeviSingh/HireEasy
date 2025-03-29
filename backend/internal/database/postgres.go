@@ -1,38 +1,51 @@
 package database
 
 import (
-    "fmt"
-    "log"
-    "github.com/jmoiron/sqlx"
-    _ "github.com/lib/pq" //postgres driver
-    "backend/internal/config"
+	"fmt"
+	"log"
+
+	"backend/internal/config"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq" // Import PostgreSQL driver
 )
 
 var db *sqlx.DB
 
-// Connect establishes a connection to the PostgreSQL database.
+// Connect initializes the database connection
 func Connect() {
+	cfg := config.GetConfig()
+	if cfg == nil {
+		log.Fatal("ERROR: Config is nil. Database configuration is not loaded properly.")
+	}
 
-    cfg := config.GetConfig().DBConfig
-    
-    psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-    cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Dbname)
+	// Debugging: Print database config values
+	dbConfig := cfg.DBConfig
+	log.Printf("🔍 DB Config -> Host: %s, Port: %s, User: %s, DB: %s", dbConfig.Host, dbConfig.Port, dbConfig.Username, dbConfig.Dbname)
 
-    var err error
-    db, err = sqlx.Connect("postgres", psqlInfo)
-    if err != nil {
-        log.Fatalf("Unable to connect to database: %v", err)
-    }
+	psqlInfo := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		dbConfig.Host, dbConfig.Port, dbConfig.Username, dbConfig.Password, dbConfig.Dbname,
+	)
 
-    err = db.Ping()
-    if err != nil {
-        log.Fatalf("Unable to reach the database: %v", err)
-    }
+	var err error
+	db, err = sqlx.Connect("postgres", psqlInfo)
+	if err != nil {
+		log.Fatalf("Database connection failed: %v", err)
+	}
 
-    log.Println("Successfully connected to the database")
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("Unable to reach database: %v", err)
+	}
+
+	log.Println("✅ Successfully connected to the database")
 }
 
-// GetDB returns the database connection.
+// GetDB returns the active database connection
 func GetDB() *sqlx.DB {
-    return db
+	if db == nil {
+		log.Fatal("Database connection is not initialized")
+	}
+	return db
 }
