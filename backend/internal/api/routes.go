@@ -32,12 +32,12 @@ func SetupRoutes(router *gin.Engine) {
 		jobs := api.Group("/jobs")
 		{
 			jobs.POST("", handlers.CreateJobH)                        // Create job
-			jobs.PUT("/:job_id", handlers.UpdateJobH)                  // Update job
-			jobs.GET("/:job_id", handlers.GetJobByIdH)                // Get specific job by id
+			jobs.PUT("/:jobId", handlers.UpdateJobH)                  // Update job
+			jobs.GET("/:jobId", handlers.GetJobByIdH)                // Get specific job by id
 			jobs.GET("/jobtitle/:jobtitle", handlers.GetJobsByTitleH) // Get jobs by jobtitle
 			jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
 			jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
-			jobs.DELETE("/:job_id", handlers.DeleteJobH)               // Delete job
+			jobs.DELETE("/:jobId", handlers.DeleteJobH)               // Delete job
 		}
 
 		// Form template routes
