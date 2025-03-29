@@ -36,8 +36,8 @@ func UpdateJobH(ctx *gin.Context) {
     
     var updateJob models.Job
 
-    // Extract :jobId from URL parameters and inject it to body, since in models.Job job_id is required
-    jobID := ctx.Param("jobId")
+    // Extract :job_id from URL parameters and inject it to body, since in models.Job job_id is required
+    jobID := ctx.Param("job_id")
     updateJob.JobID = jobID
 
     if err := ctx.ShouldBindJSON(&updateJob); err != nil {
@@ -60,9 +60,9 @@ func UpdateJobH(ctx *gin.Context) {
 
 // GetJob retrieves a specific job by ID
 func GetJobByIdH(ctx *gin.Context) {
-    jobId := ctx.Param("jobId")
+    jobID := ctx.Param("job_id")
     
-    job, err := services.GetJobById(ctx, jobId)
+    job, err := services.GetJobById(ctx, jobID)
     if err != nil {
 
         if err == sql.ErrNoRows {
@@ -120,9 +120,9 @@ func ListUserJobsH(ctx *gin.Context) {
 
 // DeleteJob deletes a specific job
 func DeleteJobH(ctx *gin.Context) {
-    jobId := ctx.Param("jobId")
+    jobID := ctx.Param("job_id")
     
-    if err := services.DeleteJob(ctx, jobId); err != nil {
+    if err := services.DeleteJob(ctx, jobID); err != nil {
 
         if err == services.ErrJobDoesNotExist {
             ctx.JSON(http.StatusBadRequest, gin.H{"msg": "Bad request", "error": err.Error()})

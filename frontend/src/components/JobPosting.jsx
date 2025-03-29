@@ -59,14 +59,14 @@ export function JobPosting() {
 
     const token = localStorage.getItem("token"); // Get JWT token
 
-    // Map frontend fields to backend structure (correct field names as in the backend model)
+    // Map frontend fields to backend structure
     const jobDataMapped = {
       job_id: jobData.JobID.trim(),
       job_title: jobData.Info2.trim(),
       job_description: jobData.Info3.trim(),
       job_status: "Open",
       skills_required: jobData.Info5.trim()
-        ? jobData.Info5.split(",").map(skill => skill.trim()) // Convert to array
+        ? jobData.Info5.split(",").map(skill => skill.trim())
         : [],
       location: jobData.Info1.trim() || "EMPTY",
       experience: jobData.Info4.trim() || "EMPTY",
@@ -79,7 +79,6 @@ export function JobPosting() {
 
     console.log("Mapped Job Data:", jobDataMapped);
 
-    // Check if all required fields are valid
     if (
       !jobDataMapped.job_id ||
       !jobDataMapped.job_title ||
@@ -89,7 +88,6 @@ export function JobPosting() {
       jobDataMapped.skills_required.length === 0
     ) {
       setError("Please fill in all required fields and provide at least one skill.");
-      console.log("Validation failed. Missing required fields.");
       setLoading(false);
       return;
     }
@@ -99,14 +97,12 @@ export function JobPosting() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Attach JWT token
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify(jobDataMapped),
       });
 
       const data = await response.json();
-
-      console.log("Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.msg || "Failed to create job posting.");
@@ -130,131 +126,98 @@ export function JobPosting() {
   };
 
   return (
-    <div
-      style={{ textAlign: "center", marginTop: "20px", position: "relative" }}
-    >
-      {/* Dashboard Button */}
+    <div className="flex flex-col min-h-screen bg-gray-100">
+      {/* ✅ Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        style={{
-          position: "absolute",
-          top: "10px",
-          left: "10px",
-          padding: "5px 10px",
-          fontSize: "16px",
-          cursor: "pointer",
-        }}
+        className="absolute top-4 left-4 px-4 py-2 text-lg bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
       >
         ⬅️ Dashboard
       </button>
 
-      <h2>Create Job Posting</h2>
+      {/* ✅ Job Posting Form Section */}
+      <div className="flex-grow flex justify-center items-center">
+        <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-3xl">
+          <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
+            Create Job Posting
+          </h2>
 
-      {error && <p className="error-text" style={{ color: "red" }}>{error}</p>}
-      {success && <p className="success-text" style={{ color: "green" }}>{success}</p>}
+          {error && <p className="text-red-500 text-center">{error}</p>}
+          {success && <p className="text-green-500 text-center">{success}</p>}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ maxWidth: "600px", margin: "auto" }}
-      >
-        {/* Job ID Field */}
-        <div style={{ marginBottom: "10px" }}>
-          <label>Job ID (Required): </label>
-          <input
-            type="text"
-            name="JobID"
-            value={jobData.JobID}
-            onChange={handleChange}
-            required
-            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
-            placeholder="Enter Job ID"
-          />
-        </div>
+          <form onSubmit={handleSubmit}>
+            {/* Job ID Field */}
+            <div className="mb-4">
+              <label className="block font-medium mb-1 text-lg">Job ID (Required):</label>
+              <input
+                type="text"
+                name="JobID"
+                value={jobData.JobID}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+                placeholder="Enter Job ID"
+              />
+            </div>
 
-        {/* Job Fields */}
-        {["Info1", "Info2", "Info3", "Info4", "Info5"].map((key, index) => (
-          <div key={index} style={{ marginBottom: "10px" }}>
-            <label>{placeholders[key]}:</label>
-            <textarea
-              name={key}
-              value={jobData[key]}
-              onChange={handleChange}
-              rows="2"
-              style={{
-                width: "100%",
-                padding: "8px",
-                fontSize: "16px",
-                resize: "none",
-              }}
-              placeholder={placeholders[key]}
-            />
-          </div>
-        ))}
+            {/* Job Fields */}
+            {["Info1", "Info2", "Info3", "Info4", "Info5"].map((key, index) => (
+              <div key={index} className="mb-4">
+                <label className="block font-medium mb-1 text-lg">{placeholders[key]}:</label>
+                <textarea
+                  name={key}
+                  value={jobData[key]}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+                  placeholder={placeholders[key]}
+                />
+              </div>
+            ))}
 
-        {/* Info6 - Info10 with Remove Button */}
-        {["Info6", "Info7", "Info8", "Info9", "Info10"].map((key, index) => (
-          <div
-            key={index}
-            style={{
-              marginBottom: "10px",
-              display: jobData[key] !== "none" ? "block" : "none",
-            }}
-          >
-            <label>{placeholders[key]}:</label>
-            <textarea
-              name={key}
-              value={jobData[key]}
-              onChange={handleChange}
-              rows="2"
-              style={{
-                width: "100%",
-                padding: "8px",
-                fontSize: "16px",
-                resize: "none",
-              }}
-              placeholder={placeholders[key]}
-            />
+            {/* Info6 - Info10 with Remove Button */}
+            {["Info6", "Info7", "Info8", "Info9", "Info10"].map((key, index) => (
+              <div key={index} className={`mb-4 ${jobData[key] === "none" ? "hidden" : "block"}`}>
+                <label className="block font-medium mb-1 text-lg">{placeholders[key]}:</label>
+                <textarea
+                  name={key}
+                  value={jobData[key]}
+                  onChange={handleChange}
+                  rows="3"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+                  placeholder={placeholders[key]}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemove(key)}
+                  className="ml-2 mt-2 px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                >
+                  ❌ Remove
+                </button>
+              </div>
+            ))}
+
+            {/* ✅ "Post Job" Button */}
             <button
-              type="button"
-              onClick={() => handleRemove(key)}
-              style={{
-                marginLeft: "10px",
-                cursor: "pointer",
-                background: "red",
-                color: "white",
-                padding: "5px 10px",
-                border: "none",
-                borderRadius: "5px",
-              }}
+              type="submit"
+              className="w-full py-3 mt-6 bg-green-500 text-white rounded-lg text-lg hover:bg-green-600 transition"
+              disabled={loading}
             >
-              ❌ Remove
+              {loading ? "Posting Job..." : "Post Job"}
             </button>
-          </div>
-        ))}
 
-        {/* Submit and New Buttons */}
-        <button
-          type="submit"
-          style={{ marginTop: "10px", cursor: "pointer", padding: "10px 15px" }}
-          disabled={loading}
-        >
-          {loading ? "Posting Job..." : "Post Job"}
-        </button>
-
-        {formSubmitted && (
-          <button
-            type="button"
-            onClick={handleNewJob}
-            style={{
-              marginLeft: "10px",
-              cursor: "pointer",
-              padding: "10px 15px",
-            }}
-          >
-            New
-          </button>
-        )}
-      </form>
+            {formSubmitted && (
+              <button
+                type="button"
+                onClick={handleNewJob}
+                className="w-full py-3 mt-2 bg-gray-500 text-white rounded-lg text-lg hover:bg-gray-600 transition"
+              >
+                New Job
+              </button>
+            )}
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
