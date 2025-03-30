@@ -8,45 +8,54 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// SetupRoutes defines all API routes
 func SetupRoutes(router *gin.Engine) {
-    
-    // add cors middleware
+	// Add CORS middleware
 	router.Use(cors.Default())
-    api := router.Group("/api", middleware.AuthMiddleware())
-    
-    // Authentication routes
-    api.POST("/login", handlers.LoginH)
-    api.POST("/register", handlers.RegisterH)
 
-    //job routes
-    jobs := api.Group("/jobs")
-    {
-        jobs.POST("", handlers.CreateJobH)                        // Create job
-        jobs.PUT("/:jobId", handlers.UpdateJobH)                  // Update job
-        jobs.GET("/:jobId", handlers.GetJobByIdH)                 // Get specific job by id
-        jobs.GET("/jobtitle/:jobtitle", handlers.GetJobsByTitleH) // Get jobs by jobtitle - Has to include the jobtitle(could be a subset)
-        jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
-        jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
-        jobs.DELETE("/:jobId", handlers.DeleteJobH)               // Delete job
-    }
+	// Public routes (no auth required)
+	public := router.Group("/api")
+	{
+		// Authentication routes
+		public.POST("/login", handlers.LoginH)
+		public.POST("/register", handlers.RegisterH)
 
-    //form template routes
-    formTemplates := api.Group("/forms/templates")
-    {
-        formTemplates.POST("", handlers.CreateFormTemplateH)                     // Create form template
-        formTemplates.GET("/:form_template_id", handlers.GetFormTemplateH)       // Get specific template
-        formTemplates.GET("", handlers.ListFormTemplatesH)                       // List all templates
-        formTemplates.DELETE("/:form_template_id", handlers.DeleteFormTemplateH) // Delete template
-    }
+		// Form submission routes (unauthenticated)
+		public.POST("/jobs/:job_id/apply", handlers.HandleFormSubmission)    // Submit job application
+		public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
+	}
 
+	// Protected routes (auth required)
+	api := router.Group("/api", middleware.AuthMiddleware())
+	{
+		// Job routes
+		jobs := api.Group("/jobs")
+		{
+			jobs.POST("", handlers.CreateJobH)                        // Create job
+			jobs.PUT("/:job_id", handlers.UpdateJobH)                  // Update job
+			jobs.GET("/:job_id", handlers.GetJobByIdH)                // Get specific job by id
+			jobs.GET("/jobtitle/:jobtitle", handlers.GetJobsByTitleH) // Get jobs by jobtitle
+			jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
+			jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
+			jobs.DELETE("/:job_id", handlers.DeleteJobH)               // Delete job
+		}
 
-    // Application form routes
-    applicationForms := api.Group("")
-    {
-        applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template, return unique URL and form_uuid
-        applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status (active/inactive)
-        applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get job and form template details (unauthenticated)
-        applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form and unlink from job
-    }
+		// Form template routes
+		formTemplates := api.Group("/forms/templates")
+		{
+			formTemplates.POST("", handlers.CreateFormTemplateH)                     // Create form template
+			formTemplates.GET("/:form_template_id", handlers.GetFormTemplateH)       // Get specific template
+			formTemplates.GET("", handlers.ListFormTemplatesH)                       // List all templates
+			formTemplates.DELETE("/:form_template_id", handlers.DeleteFormTemplateH) // Delete template
+		}
 
+		// Application form routes
+		applicationForms := api.Group("")
+		{
+			applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template
+			applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status
+			applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get form details
+			applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form
+		}
+	}
 }

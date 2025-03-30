@@ -1,25 +1,31 @@
 package main
 
 import (
-    "log"
-    "github.com/gin-gonic/gin"
-    "backend/internal/api"
-    "backend/internal/database"
-    "backend/internal/config"
+	"backend/internal/api"
+	"backend/internal/config"
+	"backend/internal/database"
+	"fmt"
+	"log"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
 
-    config.LoadConfig()
+	config.LoadConfig()
 
-    database.Connect()
-    
-    router := gin.Default()
+	database.Connect()
 
-    api.SetupRoutes(router)
-    
-    log.Println("Starting server on :8080")
-    if err := router.Run(":8080"); err != nil {
-        log.Fatalf("Could not start server: %s\n", err)
-    }
+	router := gin.Default()
+
+	api.SetupRoutes(router)
+	for _, r := range router.Routes() {
+		fmt.Println("🔍 Route registered:", r.Method, r.Path)
+	}
+
+	log.Println("Starting server on :8080")
+
+	if err := router.Run(":8080"); err != nil {
+		log.Fatalf("Could not start server: %s\n", err)
+	}
 }

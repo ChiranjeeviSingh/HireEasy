@@ -112,7 +112,7 @@ func TestUpdateJobH(t *testing.T) {
 		c.Next()
 	})
 	router.POST("/api/jobs", handlers.CreateJobH)
-	router.PUT("/api/jobs/:jobId", handlers.UpdateJobH)
+	router.PUT("/api/jobs/:job_id", handlers.UpdateJobH)
 
 	// First create a job
 	jobID := createTestJob(t, router, userID)
@@ -164,7 +164,7 @@ func TestGetJobByIdH(t *testing.T) {
 		c.Next()
 	})
 	router.POST("/api/jobs", handlers.CreateJobH)
-	router.GET("/api/jobs/:jobId", handlers.GetJobByIdH)
+	router.GET("/api/jobs/:job_id", handlers.GetJobByIdH)
 
 	// First create a job
 	jobID := createTestJob(t, router, userID)
@@ -341,7 +341,7 @@ func TestDeleteJobH(t *testing.T) {
 		c.Next()
 	})
 	router.POST("/api/jobs", handlers.CreateJobH)
-	router.DELETE("/api/jobs/:jobId", handlers.DeleteJobH)
+	router.DELETE("/api/jobs/:job_id", handlers.DeleteJobH)
 
 	// First create a job
 	jobID := createTestJob(t, router, userID)
