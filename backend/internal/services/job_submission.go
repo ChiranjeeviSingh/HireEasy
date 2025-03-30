@@ -23,6 +23,11 @@ func NewFormSubmissionService(db *sqlx.DB) *FormSubmissionService {
 }
 
 func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.JobSubmission, error) {
+	// Check table structure first (for debugging)
+	if err := s.checkJobSubmissionsTable(); err != nil {
+		log.Printf("Warning: Failed to check job_submissions table structure: %v", err)
+	}
+
 	var submission models.FormSubmissionRequest
 	
 	// Parse multipart form
@@ -109,25 +114,104 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 }
 
 func (s *FormSubmissionService) insertJobSubmission(submission *models.JobSubmission) error {
-	query := `
-		INSERT INTO job_submissions (
-			job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id`
+	// First let's try to understand the structure of the job_submissions table
+	tableInfo, err := s.db.Query(`
+		SELECT column_name, data_type, is_nullable 
+		FROM information_schema.columns 
+		WHERE table_name = 'job_submissions'
+	`)
+	if err != nil {
+		log.Printf("Error examining job_submissions table: %v", err)
+		// Continue anyway, we'll try the insert
+	} else {
+		defer tableInfo.Close()
+		
+		var columns []string
+		for tableInfo.Next() {
+			var name, dataType, nullable string
+			if err := tableInfo.Scan(&name, &dataType, &nullable); err == nil {
+				columns = append(columns, fmt.Sprintf("%s(%s, %s)", name, dataType, nullable))
+			}
+		}
+		log.Printf("Table structure: %v", columns)
+	}
 
-	err := s.db.QueryRow(
-		query,
-		submission.JobID,
-		submission.Username,
-		submission.Email,
-		submission.FormData,
-		submission.Skills,
-		submission.ResumeURL,
-		submission.ATSScore,
-		submission.Status,
-		submission.CreatedAt,
-		submission.UpdatedAt,
-	).Scan(&submission.ID)
+	// Check if the form_uuid column exists
+	var hasFormUUID bool
+	err = s.db.Get(&hasFormUUID, `
+		SELECT EXISTS (
+			SELECT 1 
+			FROM information_schema.columns 
+			WHERE table_name = 'job_submissions' AND column_name = 'form_uuid'
+		)
+	`)
+	if err != nil {
+		log.Printf("Error checking for form_uuid column: %v", err)
+		// Continue anyway, we'll try the insert
+	}
+
+	var insertQuery string
+	var args []interface{}
+
+	if hasFormUUID {
+		// Try to get any form_uuid for this job
+		var formUUID string
+		err = s.db.QueryRow(`
+			SELECT id FROM form_templates 
+			WHERE job_id = $1 
+			LIMIT 1
+		`, submission.JobID).Scan(&formUUID)
+		
+		if err != nil {
+			// If no form template exists, use a default UUID for test submissions
+			formUUID = "00000000-0000-0000-0000-000000000000"
+			log.Printf("Using default UUID as no form template found: %s", formUUID)
+		}
+		
+		// Query with form_uuid
+		insertQuery = `
+			INSERT INTO job_submissions (
+				form_uuid, job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			RETURNING id`
+		
+		args = []interface{}{
+			formUUID,
+			submission.JobID,
+			submission.Username,
+			submission.Email,
+			submission.FormData,
+			submission.Skills,
+			submission.ResumeURL,
+			submission.ATSScore,
+			submission.Status,
+			submission.CreatedAt,
+			submission.UpdatedAt,
+		}
+	} else {
+		// Query without form_uuid
+		insertQuery = `
+			INSERT INTO job_submissions (
+				job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			RETURNING id`
+		
+		args = []interface{}{
+			submission.JobID,
+			submission.Username,
+			submission.Email,
+			submission.FormData,
+			submission.Skills,
+			submission.ResumeURL,
+			submission.ATSScore,
+			submission.Status,
+			submission.CreatedAt,
+			submission.UpdatedAt,
+		}
+	}
+
+	log.Printf("Using query: %s", insertQuery)
+	err = s.db.QueryRow(insertQuery, args...).Scan(&submission.ID)
 
 	if err != nil {
 		return fmt.Errorf("failed to insert job submission: %v", err)
@@ -146,4 +230,32 @@ func calculateATSScore(skills []string) int {
 		score = 100
 	}
 	return score
+}
+
+func (s *FormSubmissionService) checkJobSubmissionsTable() error {
+	// Check if the job_submissions table exists and get its columns
+	query := `
+		SELECT column_name 
+		FROM information_schema.columns 
+		WHERE table_name = 'job_submissions'
+		ORDER BY ordinal_position;
+	`
+	
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to query table schema: %v", err)
+	}
+	defer rows.Close()
+	
+	var columns []string
+	for rows.Next() {
+		var col string
+		if err := rows.Scan(&col); err != nil {
+			return fmt.Errorf("failed to scan column name: %v", err)
+		}
+		columns = append(columns, col)
+	}
+	
+	log.Printf("Job submissions table columns: %v", columns)
+	return nil
 }
