@@ -33,7 +33,6 @@ func CreateJobH(ctx *gin.Context) {
 
 // UpdateJob updates a specific job
 func UpdateJobH(ctx *gin.Context) {
-    
     var updateJob models.Job
 
     // Extract :job_id from URL parameters and inject it to body, since in models.Job job_id is required
@@ -58,7 +57,7 @@ func UpdateJobH(ctx *gin.Context) {
     ctx.JSON(http.StatusOK, updateJob)
 }
 
-// GetJob retrieves a specific job by ID
+// GetJobById retrieves a specific job by ID
 func GetJobByIdH(ctx *gin.Context) {
     jobID := ctx.Param("job_id")
     
