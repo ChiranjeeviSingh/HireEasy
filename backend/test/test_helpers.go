@@ -133,7 +133,7 @@ func InsertTestUser(db *sql.DB) (userID int, token string) {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	query := `INSERT INTO users (email, password_hash, username) VALUES ('test@example.com', $1, 'testuser') RETURNING id`
+	query := `INSERT INTO users (email, password_hash, username, role, company_name) VALUES ('test@example.com', $1, 'testuser', 'HR', 'Test Company') RETURNING id`
 	err = db.QueryRow(query, string(hashedPassword)).Scan(&userID)
 	if err != nil {
 		log.Fatalf("Failed to insert test user: %v", err)

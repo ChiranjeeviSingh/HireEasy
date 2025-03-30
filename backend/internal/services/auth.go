@@ -20,6 +20,8 @@ type RegisterRequest struct {
     Username string `json:"username" binding:"required"`
     Email    string `json:"email" binding:"required,email"`
     Password string `json:"password" binding:"required,min=6"`
+    Role string     `json:"role" binding:"required"`
+    CompanyName string `json:"company_name" binding:"required"` 
 }
 
 type LoginRequest struct {
@@ -55,9 +57,9 @@ func Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error) 
     // Create user
     var userId int
     err = db.GetContext(ctx, &userId,
-        `INSERT INTO users (email, password_hash, username) 
-         VALUES ($1, $2, $3) 
-         RETURNING id`, req.Email, string(hashedPassword), req.Username)
+        `INSERT INTO users (email, password_hash, username, role, company_name) 
+         VALUES ($1, $2, $3, $4, $5) 
+         RETURNING id`, req.Email, string(hashedPassword), req.Username, req.Role, req.CompanyName)
     if err != nil {
         return nil, err
     }
