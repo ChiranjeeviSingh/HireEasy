@@ -9,7 +9,7 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
-    
+
     // add cors middleware
 	router.Use(cors.Default())
     api := router.Group("/api", middleware.AuthMiddleware())
@@ -48,5 +48,15 @@ func SetupRoutes(router *gin.Engine) {
         applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get job and form template details (unauthenticated)
         applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form and unlink from job
     }
+
+
+    // Profile(Interviwer) routes
+    profiles := api.Group("/profiles")
+    {
+        profiles.POST("", handlers.CreateProfileH)          // Create new profile
+        profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
+        profiles.PUT("/me", handlers.UpdateMyProfileH)      // Update own profile
+    }
+
 
 }

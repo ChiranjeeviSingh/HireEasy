@@ -1,6 +1,12 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE users (
+-- DROP TABLE IF EXISTS application_form CASCADE;
+-- DROP TABLE IF EXISTS form_templates CASCADE;
+-- DROP TABLE IF EXISTS jobs CASCADE;
+-- DROP TABLE IF EXISTS users CASCADE;
+-- DROP TABLE IF EXISTS profiles CASCADE;
+
+CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -11,7 +17,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE jobs (
+CREATE TABLE IF NOT EXISTS jobs (
     id SERIAL PRIMARY KEY, --id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     job_id VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -25,7 +31,7 @@ CREATE TABLE jobs (
     );
 
 
-CREATE TABLE form_templates (
+CREATE TABLE IF NOT EXISTS form_templates (
     id SERIAL PRIMARY KEY,
     form_template_id VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id),
@@ -34,7 +40,7 @@ CREATE TABLE form_templates (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE application_form (
+CREATE TABLE IF NOT EXISTS application_form (
     form_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),   -- Auto-generating unique UUID
     job_id INT NOT NULL,                                     -- id of job table
     form_id INT NOT NULL,                                    -- id of form_template table
@@ -44,9 +50,19 @@ CREATE TABLE application_form (
     FOREIGN KEY (form_id) REFERENCES form_templates(id)      -- Foreign key reference to the form_templates table
 );
 
+CREATE TABLE IF NOT EXISTS  Profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job_title VARCHAR(255),
+    years_of_experience INT,
+    areas_of_expertise TEXT[],
+    phone_number VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Add indexes for common queries
-CREATE INDEX idx_jobs_user_id ON jobs(user_id);
-CREATE INDEX idx_jobs_id ON jobs(job_id);
-CREATE INDEX idx_jobs_status ON jobs(job_status);
-CREATE INDEX idx_jobs_title ON jobs(job_title);
+CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_id ON jobs(job_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(job_status);
+CREATE INDEX IF NOT EXISTS idx_jobs_title ON jobs(job_title);
