@@ -5,15 +5,33 @@ import (
     "backend/internal/database"
     "backend/internal/models"
 	"github.com/lib/pq"
+	"errors"
 )
 
+
+var (
+    ErrProfileExists = errors.New("profile already exists for this user")
+)
 
 func CreateProfile(ctx context.Context, req *models.Profile) error {
 	db := database.GetDB()
 	
 	userID := ctx.Value("userID")
 
-	_, err := db.ExecContext(ctx,
+	// First check if a profile already exists for this user
+	var exists bool
+	err := db.QueryRowContext(ctx, 
+		"SELECT EXISTS(SELECT 1 FROM profiles WHERE user_id = $1)", 
+		userID).Scan(&exists)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return ErrProfileExists
+	}
+
+	// If no profile exists, create new one
+	_, err = db.ExecContext(ctx,
 		`INSERT INTO profiles (user_id, job_title, years_of_experience, areas_of_expertise, phone_number)
 		 VALUES ($1, $2, $3, $4, $5)`,
 		userID, req.JobTitle, req.YearsOfExperience, pq.Array(req.Areas_of_expertise), req.PhoneNumber)

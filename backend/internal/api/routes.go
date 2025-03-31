@@ -54,9 +54,9 @@ func SetupRoutes(router *gin.Engine) {
     profiles := api.Group("/profiles")
     {
         profiles.POST("", handlers.CreateProfileH)          // Create new profile
+        profiles.PUT("", handlers.UpdateMyProfileH)      // Update own profile
         profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
-        profiles.PUT("/me", handlers.UpdateMyProfileH)      // Update own profile
     }
-
+    
 
 }

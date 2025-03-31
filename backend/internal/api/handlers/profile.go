@@ -16,9 +16,15 @@ func CreateProfileH(ctx *gin.Context) {
 
 	err := services.CreateProfile(ctx, &profileReq)
 	if err != nil {
+
+		if err == services.ErrProfileExists{
+			ctx.JSON(http.StatusBadRequest, gin.H{"msg": "Bad request", "error": err.Error()})
+			return} 
+		
 		ctx.JSON(http.StatusInternalServerError, gin.H{"msg": "Could not create profile", "error": err.Error()})
 		return
 	}
+
 
 	ctx.JSON(http.StatusCreated, profileReq)
 }
