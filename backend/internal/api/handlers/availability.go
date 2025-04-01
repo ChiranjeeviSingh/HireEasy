@@ -89,11 +89,11 @@ func GetUserAvailabilityH(ctx *gin.Context) {
 // GetAvailablePeopleH retrieves all available people
 func GetAllAvailabilityH(ctx *gin.Context) {
 	
-	people, err := services.GetAllAvailability(ctx)
+	allSlots, err := services.GetAllAvailability(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve available people", "msg": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, people)
+	ctx.JSON(http.StatusOK, allSlots)
 }

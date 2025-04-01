@@ -54,8 +54,9 @@ func SetupRoutes(router *gin.Engine) {
     profiles := api.Group("/profiles")
     {
         profiles.POST("", handlers.CreateProfileH)          // Create new profile
-        profiles.PUT("", handlers.UpdateMyProfileH)      // Update own profile
+        profiles.PUT("", handlers.UpdateMyProfileH)         // Update own profile
         profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
+        profiles.GET("/user/:user_name", handlers.GetUserProfileH) // Get other users profile
     }
 
     // Availability routes
@@ -67,6 +68,7 @@ func SetupRoutes(router *gin.Engine) {
         availability.GET("/user/:user_name", handlers.GetUserAvailabilityH)  // Get specific user's availability(using user's username)
         availability.GET("", handlers.GetAllAvailabilityH)         // Get all available people with with optional date range, profile filters
     }
+
 
 
 }

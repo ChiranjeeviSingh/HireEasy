@@ -11,7 +11,6 @@ import (
 	"database/sql"
 	"strings"
 	"github.com/lib/pq"
-	"log"
 )
 
 var (
@@ -148,9 +147,6 @@ func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availabi
 	fromDate := ctx.Query("from_date")
     toDate := ctx.Query("to_date")
 	
-	fmt.Println("fromDate:", fromDate)
-    fmt.Println("toDate:", toDate)
-	
 	query := `SELECT id, user_id, date, from_time, to_time, created_at, updated_at
 		FROM availabilities 
 		WHERE user_id = $1`
@@ -192,6 +188,27 @@ func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availabi
 		if err != nil {
 			return nil, err
 		}
+
+		formattedFromTime, err := time.Parse(time.RFC3339, availability.FromTime)
+		if err != nil {
+			// Try parsing as "15:04" if RFC3339 fails
+			formattedFromTime, err = time.Parse("15:04", availability.FromTime)
+			if err != nil {
+				return nil, err
+			}
+		}
+		availability.FromTime = formattedFromTime.Format("15:04")
+
+		formattedToTime, err := time.Parse(time.RFC3339, availability.ToTime)
+		if err != nil {
+			// Try parsing as "15:04" if RFC3339 fails
+			formattedToTime, err = time.Parse("15:04", availability.ToTime)
+			if err != nil {
+				return nil, err
+			}
+		}
+		availability.ToTime = formattedToTime.Format("15:04")
+
 		availabilities = append(availabilities, availability)
 	}
 
@@ -199,9 +216,9 @@ func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availabi
 }
 
 
-func GetAllAvailability(ctx *gin.Context) ([]*models.Availability, error) {
+func GetAllAvailability(ctx *gin.Context) ([]*models.GetAllAvailability, error) {
 	db := database.GetDB()
-	availabilities := []*models.Availability{}
+	availabilities := []*models.GetAllAvailability{}
 	
 	fromDate := ctx.Query("from_date")
     toDate := ctx.Query("to_date")
@@ -213,7 +230,7 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.Availability, error) {
     	areasOfExpertise = strings.Split(strings.ToLower(expertise), ",")
 	}
 
-	query := `SELECT DISTINCT a.id, a.user_id, a.from_time, a.to_time, a.date, a.created_at, a.updated_at
+	query := `SELECT DISTINCT a.id, a.user_id, u.username, a.from_time, a.to_time, a.date, a.created_at, a.updated_at
 		FROM availabilities a
 		JOIN users u ON a.user_id = u.id
 		LEFT JOIN profiles p ON u.id = p.user_id
@@ -247,7 +264,6 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.Availability, error) {
 	}
 
 	if len(areasOfExpertise) > 0 {
-		log.Println("here again", areasOfExpertise)
 		query += fmt.Sprintf(` AND p.areas_of_expertise && $%d`, argCount)
 		args = append(args, pq.Array(areasOfExpertise))
 		argCount++
@@ -258,16 +274,16 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.Availability, error) {
 
 	rows, err := db.QueryContext(ctx.Request.Context(), query, args...)
 	if err != nil {
-		log.Println("here error")
 		return nil, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		availability := &models.Availability{}
+		availability := &models.GetAllAvailability{}
 		err := rows.Scan(
 			&availability.ID,
 			&availability.UserID,
+			&availability.UserName,
 			&availability.FromTime,
 			&availability.ToTime,
 			&availability.Date,
@@ -277,6 +293,27 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.Availability, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		formattedFromTime, err := time.Parse(time.RFC3339, availability.FromTime)
+		if err != nil {
+			// Try parsing as "15:04" if RFC3339 fails
+			formattedFromTime, err = time.Parse("15:04", availability.FromTime)
+			if err != nil {
+				return nil, err
+			}
+		}
+		availability.FromTime = formattedFromTime.Format("15:04")
+
+		formattedToTime, err := time.Parse(time.RFC3339, availability.ToTime)
+		if err != nil {
+			// Try parsing as "15:04" if RFC3339 fails
+			formattedToTime, err = time.Parse("15:04", availability.ToTime)
+			if err != nil {
+				return nil, err
+			}
+		}
+		availability.ToTime = formattedToTime.Format("15:04")
+
 		availabilities = append(availabilities, availability)
 	}
 
