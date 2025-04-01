@@ -12,6 +12,7 @@ type Config struct {
 	JWTSecret   string
 	TestMode    bool
 	DBConfig    postgresConfig
+	CORSConfig  corsConfig
 }
 
 type postgresConfig struct {
@@ -22,27 +23,14 @@ type postgresConfig struct {
 	Dbname   string
 }
 
+type corsConfig struct {
+	AllowedOrigins   []string
+	AllowedMethods   []string
+	AllowedHeaders   []string
+	AllowCredentials bool
+}
+
 var globalConfig *Config
-
-// func LoadConfig() error {
-// 	globalConfig = &Config{
-// 		AWSRegion:   os.Getenv("AWS_REGION"),
-// 		AWSEndpoint: os.Getenv("AWS_ENDPOINT"),
-// 		JWTSecret:   "abcdefghijklmno",
-// 		DBConfig: postgresConfig{
-// 			Host:     "localhost",
-// 			Port:     "5432",
-// 			Username: "reshma",
-// 			Password: "postgres",
-// 			Dbname:   "app_db",
-// 		},
-// 	}
-// 	return nil
-// }
-
-// func GetConfig() *Config {
-//     return globalConfig
-// }
 
 func LoadConfig() error {
 	// Load test mode from environment
@@ -57,9 +45,15 @@ func LoadConfig() error {
 		DBConfig: postgresConfig{
 			Host:     getEnvOrDefault("DB_HOST", "localhost"),
 			Port:     getEnvOrDefault("DB_PORT", "5432"),
-			Username: getEnvOrDefault("DB_USER", "reshma"),
-			Password: getEnvOrDefault("DB_PASSWORD", "postgres"),
-			Dbname:   getEnvOrDefault("DB_NAME", "app_db"),
+			Username: getEnvOrDefault("DB_USER", "postgres"),
+			Password: getEnvOrDefault("DB_PASSWORD", "123456"),
+			Dbname:   getEnvOrDefault("DB_NAME", "go_db"),
+		},
+		CORSConfig: corsConfig{
+			AllowedOrigins:   []string{getEnvOrDefault("CORS_ALLOWED_ORIGINS", "http://localhost:3000")},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Content-Type", "Authorization"},
+			AllowCredentials: getEnvOrDefault("CORS_ALLOW_CREDENTIALS", "true") == "true",
 		},
 	}
 
@@ -69,6 +63,13 @@ func LoadConfig() error {
 		globalConfig.DBConfig.Port,
 		globalConfig.DBConfig.Username,
 		globalConfig.DBConfig.Dbname)
+
+	log.Printf("🌍 CORS Settings: AllowedOrigins=%v, AllowedMethods=%v, AllowedHeaders=%v, AllowCredentials=%v",
+		globalConfig.CORSConfig.AllowedOrigins,
+		globalConfig.CORSConfig.AllowedMethods,
+		globalConfig.CORSConfig.AllowedHeaders,
+		globalConfig.CORSConfig.AllowCredentials,
+	)
 
 	return nil
 }

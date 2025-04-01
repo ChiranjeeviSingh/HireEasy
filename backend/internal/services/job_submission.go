@@ -51,7 +51,7 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 
 	// Extract skills from form data
 	var skills []string
-	if skillsInterface, ok := formDataMap["skills"].([]interface{}); ok {
+	if skillsInterface, ok := formDataMap["Q_Skills"].([]interface{}); ok {
 		for _, skill := range skillsInterface {
 			if skillStr, ok := skill.(string); ok {
 				skills = append(skills, skillStr)
