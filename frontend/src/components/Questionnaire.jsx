@@ -27,14 +27,31 @@ export function Questionnaire() {
         type: "text",
         options: [],
       },
-      { id: "Q_Resume", text: "Upload your resume", type: "file", options: [] },
+      {
+        id: "Q_Resume",
+        text: "Upload your resume",
+        type: "file",
+        options: [],
+      },
+      {
+        id: "Q6",
+        text: "What is your expected salary?",
+        type: "text",
+        options: [],
+      },
     ],
   };
 
   const [formData, setFormData] = useState(initialState);
+  const [additionalQuestions, setAdditionalQuestions] = useState([]);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Handle input changes
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
+
+  // Handle input changes for predefined questions
   const handleChange = (e, index, isOption = false, optionIndex = null) => {
     const updatedQuestions = [...formData.Questions];
 
@@ -47,157 +64,282 @@ export function Questionnaire() {
     setFormData({ ...formData, Questions: updatedQuestions });
   };
 
+  // Handle input changes for additional questions (Q7-Q10)
+  const handleAdditionalChange = (e, index, isOption = false, optionIndex = null) => {
+    const updatedQuestions = [...additionalQuestions];
+
+    if (isOption) {
+      updatedQuestions[index].options[optionIndex] = e.target.value;
+    } else {
+      updatedQuestions[index].text = e.target.value;
+    }
+
+    setAdditionalQuestions(updatedQuestions);
+  };
+
+  // Add new option for multiple-choice questions
+  const addOption = (index, isAdditional = false) => {
+    if (isAdditional) {
+      const updatedQuestions = [...additionalQuestions];
+      updatedQuestions[index].options.push("");
+      setAdditionalQuestions(updatedQuestions);
+    } else {
+      const updatedQuestions = [...formData.Questions];
+      updatedQuestions[index].options.push("");
+      setFormData({ ...formData, Questions: updatedQuestions });
+    }
+  };
+
+  // Add new question (Q7-Q10)
+  const addQuestion = () => {
+    if (additionalQuestions.length < 4) {
+      const newQuestion = {
+        id: `Q${7 + additionalQuestions.length}`,
+        text: "",
+        type: "",
+        options: [],
+      };
+      setAdditionalQuestions([...additionalQuestions, newQuestion]);
+    }
+  };
+
+  // Set question type for a given additional question
+  const setQuestionType = (index, type) => {
+    const updatedQuestions = [...additionalQuestions];
+    updatedQuestions[index].type = type;
+
+    if (type === "radio" || type === "checkbox") {
+      // Provide at least one default option
+      updatedQuestions[index].options = ["Default1"];
+    } else {
+      updatedQuestions[index].options = [];
+    }
+
+    setAdditionalQuestions(updatedQuestions);
+  };
+
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Questionnaire Created:", formData);
-    alert("Questionnaire Created Successfully!");
-    setFormSubmitted(true);
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    const token = localStorage.getItem("token");
+
+    // Merge additional questions into main form data
+    const finalQuestions = [...formData.Questions, ...additionalQuestions];
+
+    // Map frontend fields to backend structure
+    const questionnaireData = {
+      form_template_id: formData.FormID.trim(),
+      user_id: 1,
+      fields: finalQuestions.map((question) => ({
+        question_id: question.id,
+        question_text: question.text.trim(),
+        question_type: question.type,
+        options: question.options.map((option) => option.trim()),
+      })),
+    };
+
+    console.log("Mapped Questionnaire Data:", questionnaireData);
+
+    if (!questionnaireData.form_template_id || questionnaireData.fields.length === 0) {
+      setError("Please fill in all required fields.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/forms/templates`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(questionnaireData),
+      });
+
+      const data = await response.json();
+      console.log("Response Data:", data);
+
+      if (!response.ok) {
+        throw new Error(data.msg || "Failed to create questionnaire.");
+      }
+
+      setSuccess(`Questionnaire with Form ID "${data.form_template_id}" created successfully!`);
+      setFormSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between bg-gray-100">
-      {/* ✅ Dashboard Button */}
+    <div className="flex flex-col items-center min-h-screen bg-gray-100">
+      {/* Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        className="absolute top-4 left-4 px-4 py-2 text-lg bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+        className="absolute top-4 left-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
       >
         ⬅️ Dashboard
       </button>
 
-      {/* ✅ Styled Form Card (Shorter height for spacing) */}
-      <div className="flex-grow flex justify-center items-center mt-12 mb-20">
-        <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-xl h-[500px] overflow-y-auto relative">
-          <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
-            Create a Job Questionnaire
-          </h2>
+      <h2 className="text-3xl font-bold mt-12">Create a Job Questionnaire</h2>
 
-          <form onSubmit={handleSubmit}>
-            {/* Form ID Input */}
-            <div className="mb-6">
-              <label className="block font-medium mb-2 text-lg font-bold">
-                Form ID:
-              </label>
-              <input
-                type="text"
-                name="FormID"
-                value={formData.FormID}
-                onChange={(e) =>
-                  setFormData({ ...formData, FormID: e.target.value })
-                }
-                required
-                className="w-full p-3 border border-gray-500 rounded-lg text-lg focus:ring-2 focus:ring-green-400"
-                placeholder="Enter Form ID"
-              />
-            </div>
+      {error && <p className="text-red-500 mt-3">{error}</p>}
+      {success && <p className="text-green-500 mt-3">{success}</p>}
 
-            {/* Dynamic Question Inputs */}
-            {formData.Questions.map((question, index) => (
-              <div key={question.id} className="mb-6">
-                <label className="block font-medium mb-2 text-lg font-bold">
-                  {question.text}
-                </label>
+      <form onSubmit={handleSubmit} className="bg-white p-6 mt-6 shadow-md rounded-lg w-full max-w-xl">
+        {/* Form ID Input */}
+        <div className="mb-4">
+          <label className="block font-bold">Form ID:</label>
+          <input
+            type="text"
+            name="FormID"
+            value={formData.FormID}
+            onChange={(e) => setFormData({ ...formData, FormID: e.target.value })}
+            required
+            className="w-full p-2 border border-gray-300 rounded-lg"
+          />
+        </div>
 
-                {/* Text Input */}
-                {question.type === "text" && (
-                  <input
-                    type="text"
-                    className="w-full p-3 border border-gray-500 rounded-lg text-lg focus:ring-2 focus:ring-green-400"
-                  />
-                )}
+        {/* Predefined Questions */}
+        {formData.Questions.map((question, index) => (
+          <div key={question.id} className="mb-4">
+            <label className="block font-bold">Question Text:</label>
+            <input
+              type="text"
+              value={question.text}
+              onChange={(e) => handleChange(e, index)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            />
 
-                {/* Radio Buttons */}
-                {question.type === "radio" &&
-                  question.options.map((option, optionIndex) => (
-                    <label key={optionIndex} className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        name={question.id}
-                        value={option}
-                        className="w-5 h-5 text-green-500 focus:ring-green-400"
-                      />
-                      <span className="text-lg">{option}</span>
-                    </label>
-                  ))}
-
-                {/* Checkbox Options */}
-                {question.type === "checkbox" &&
-                  question.options.map((option, optionIndex) => (
-                    <label key={optionIndex} className="flex items-center space-x-3">
-                      <input
-                        type="checkbox"
-                        value={option}
-                        className="w-5 h-5 text-green-500 focus:ring-green-400"
-                      />
-                      <span className="text-lg">{option}</span>
-                    </label>
-                  ))}
-
-                {/* File Upload */}
-                {question.type === "file" && (
-                  <input
-                    type="file"
-                    className="w-full p-3 border border-gray-500 rounded-lg text-lg"
-                  />
-                )}
+            {/* Show file input placeholder if question.type === 'file' */}
+            {question.type === "file" && (
+              <div className="mt-2">
+                <input
+                  type="file"
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-lg cursor-not-allowed"
+                />
+                <p className="text-gray-500 text-sm mt-1">
+                  (File upload will be shown to candidates)
+                </p>
               </div>
-            ))}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition"
-            >
-              Submit Questionnaire
-            </button>
-
-            {formSubmitted && (
-              <button
-                type="button"
-                onClick={() => setFormData(initialState)}
-                className="w-full py-3 mt-3 bg-gray-500 text-white text-lg rounded-lg hover:bg-gray-600 transition"
-              >
-                New Questionnaire
-              </button>
             )}
-          </form>
-        </div>
-      </div>
 
-      {/* ✅ Footer Section (Now properly separated) */}
-      <footer className="bg-gradient-to-r from-gray-900 to-black text-white py-8 px-12">
-        <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Section */}
-          <div>
-            <h2 className="text-2xl font-bold">HireEasy</h2>
-            <p className="mt-3 text-gray-400">
-              Helping recruiters streamline hiring with job applications, 
-              questionnaires, and data-driven insights.
-            </p>
+            {/* If it's radio/checkbox, show the options */}
+            {(question.type === "radio" || question.type === "checkbox") && (
+              <div className="mt-2">
+                {question.options.map((option, optionIndex) => (
+                  <input
+                    key={optionIndex}
+                    type="text"
+                    value={option}
+                    onChange={(e) => handleChange(e, index, true, optionIndex)}
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addOption(index)}
+                  className="text-blue-500 mt-1"
+                >
+                  ➕ Add Option
+                </button>
+              </div>
+            )}
           </div>
+        ))}
 
-          {/* Office Information */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Office</h3>
-            <p>456 Talent Hub,</p>
-            <p>San Francisco, USA</p>
-            <p>Email: support@hireeasy.com</p>
-            <p>Phone: +1 987-654-3210</p>
-          </div>
+        {/* Additional Questions (Q7-Q10) */}
+        {additionalQuestions.map((question, index) => (
+          <div key={question.id} className="mb-4">
+            {/* Question Text */}
+            <label className="block font-bold">New Question Text:</label>
+            <input
+              type="text"
+              value={question.text}
+              onChange={(e) => handleAdditionalChange(e, index)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              placeholder="Enter question text"
+            />
 
-          {/* Useful Links */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Links</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="hover:text-gray-300 transition">Dashboard</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition">Post a Job</a></li>
-            </ul>
+            {/* Question Type Select */}
+            <label className="block font-bold mt-2">Select Question Type:</label>
+            <select
+              value={question.type}
+              onChange={(e) => setQuestionType(index, e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Select Question Type</option>
+              <option value="text">Text</option>
+              <option value="radio">Radio</option>
+              <option value="checkbox">Checkbox</option>
+              <option value="file">File</option>
+            </select>
+
+            {/* If we want to show a disabled file input for newly added “file” questions */}
+            {question.type === "file" && (
+              <div className="mt-2">
+                <input
+                  type="file"
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-lg cursor-not-allowed"
+                />
+                <p className="text-gray-500 text-sm mt-1">
+                  (File upload will be shown to candidates)
+                </p>
+              </div>
+            )}
+
+            {/* Options for radio/checkbox */}
+            {(question.type === "radio" || question.type === "checkbox") && (
+              <div className="mt-2">
+                {question.options.map((option, optionIndex) => (
+                  <input
+                    key={optionIndex}
+                    type="text"
+                    value={option}
+                    onChange={(e) => handleAdditionalChange(e, index, true, optionIndex)}
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                    placeholder={`Option ${optionIndex + 1}`}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addOption(index, true)}
+                  className="text-blue-500 mt-1"
+                >
+                  ➕ Add Option
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="text-center text-gray-400 mt-8">
-          HireEasy © {new Date().getFullYear()} - All Rights Reserved
-        </div>
-      </footer>
+        ))}
+
+        {/* Button to Add Additional Questions */}
+        {additionalQuestions.length < 4 && (
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="text-green-500 mt-3"
+          >
+            ➕ Add Question
+          </button>
+        )}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="w-full bg-green-500 text-white py-2 mt-4 rounded-lg"
+          disabled={loading}
+        >
+          {loading ? "Submitting..." : "Submit Questionnaire"}
+        </button>
+      </form>
     </div>
   );
 }

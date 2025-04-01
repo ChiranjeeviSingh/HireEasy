@@ -1,184 +1,247 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function ShareJob() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Hook for navigation
 
-  // Mock job postings data
-  const jobPostings = [
-    {
-      JobID: "JOB123",
-      Info1: "New York, USA",
-      Info2: "Software Engineer Role",
-      Info3: "$120,000 per year",
-      Info4: "5+ years experience required",
-      Info5: "Remote Work Available",
-    },
-    {
-      JobID: "JOB456",
-      Info1: "San Francisco, USA",
-      Info2: "Data Scientist Role",
-      Info3: "$135,000 per year",
-      Info4: "3+ years experience required",
-      Info5: "Hybrid Work Model",
-    },
-  ];
-
+  const [jobPostings, setJobPostings] = useState([]);
+  const [questionnaires, setQuestionnaires] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
+  const [selectedFormId, setSelectedFormId] = useState("");
   const [jobDetails, setJobDetails] = useState(null);
+  const [questions, setQuestions] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Handle dropdown selection
-  const handleJobChange = (e) => setSelectedJobId(e.target.value);
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
-  // Fetch job data
-  const fetchJobData = () => {
-    if (!selectedJobId) {
-      alert("Please select a Job ID.");
+  // Fetch job postings data from backend
+  const fetchJobPostings = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/jobs`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      console.log("Fetched Jobs:", data);
+      if (response.ok) {
+        setJobPostings(data);
+      } else {
+        setError("Failed to fetch job postings.");
+      }
+    } catch (err) {
+      setError("Error fetching job postings.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch form templates data from backend
+  const fetchFormTemplates = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/forms/templates`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      console.log("Fetched Forms:", data);
+      if (response.ok) {
+        setQuestionnaires(data);
+      } else {
+        setError("Failed to fetch form templates.");
+      }
+    } catch (err) {
+      setError("Error fetching form templates.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch job and form data after selecting both IDs
+  const fetchJobAndFormData = () => {
+    if (!selectedJobId || !selectedFormId) {
+      alert("Please select both a Job ID and a Form ID.");
       return;
     }
 
-    const jobData = jobPostings.find((job) => job.JobID === selectedJobId);
+    const jobData = jobPostings.find((job) => job.job_id === selectedJobId);
+    const questionData = questionnaires.find(
+      (form) => form.form_template_id === selectedFormId
+    );
 
-    if (!jobData) {
+    if (!jobData || !questionData) {
       alert("Invalid selection. Please try again.");
       return;
     }
 
     setJobDetails(jobData);
+    setQuestions(questionData);
   };
 
+  // Handle share button click (show dummy share link)
+  const handleShare = async () => {
+    if (!selectedJobId || !selectedFormId) {
+      alert("Please select both a Job ID and a Form ID.");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+
+    try {
+      const response = await fetch(`${API_BASE}/jobs/${selectedJobId}/forms`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          form_template_id: selectedFormId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.msg || "Failed to link job to form.");
+      }
+
+      const shareableLink = `https://hireeasy.com/apply?job=${selectedJobId}&form=${data.form_uuid}`;
+      alert(`Share using this link:\n${shareableLink}`);
+    } catch (err) {
+      alert(err.message || "Failed to share the job.");
+    }
+  };
+
+  // Load job postings and form templates when the component mounts
+  useEffect(() => {
+    fetchJobPostings();
+    fetchFormTemplates();
+  }, []);
+
   return (
-    <div
-      className="relative min-h-screen bg-cover bg-center flex flex-col justify-between"
-      // style={{
-      //   backgroundImage:
-      //     "url('https://www.shutterstock.com/image-vector/vector-business-illustration-small-people-260nw-1022567779.jpg')",
-      // }}
-    >
+    <div className="relative min-h-screen flex flex-col justify-between bg-gray-100">
       {/* ✅ Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        className="absolute top-4 left-4 px-4 py-2 text-lg bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+        className="absolute top-4 left-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
       >
         ⬅️ Dashboard
       </button>
 
-      {/* ✅ Styled Card */}
+      {/* ✅ Main Card */}
       <div className="flex-grow flex justify-center items-center">
-        <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-10 w-full max-w-3xl h-[500px] overflow-y-auto">
+        <div className="bg-white shadow-lg rounded-xl p-10 w-full max-w-3xl">
           <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
             Share Job
           </h2>
 
-          {/* Dropdown for Job ID */}
+          {error && <p className="text-red-500 text-center">{error}</p>}
+
+          {/* Dropdowns for Job ID and Form ID */}
           <div className="mb-6">
             <label className="block font-medium mb-2 text-lg">Select Job ID:</label>
             <select
               value={selectedJobId}
-              onChange={handleJobChange}
-              className="w-full p-3 border border-gray-500 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
             >
               <option value="">-- Select Job ID --</option>
-              {jobPostings.map((job) => (
-                <option key={job.JobID} value={job.JobID}>
-                  {job.JobID}
-                </option>
-              ))}
+              {jobPostings.length > 0 ? (
+                jobPostings.map((job) => (
+                  <option key={job.job_id} value={job.job_id}>
+                    {job.job_id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No jobs available</option>
+              )}
             </select>
           </div>
 
-          {/* Generate Button */}
+          <div className="mb-6">
+            <label className="block font-medium mb-2 text-lg">Select Form ID:</label>
+            <select
+              value={selectedFormId}
+              onChange={(e) => setSelectedFormId(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">-- Select Form ID --</option>
+              {questionnaires.length > 0 ? (
+                questionnaires.map((form) => (
+                  <option key={form.form_template_id} value={form.form_template_id}>
+                    {form.form_template_id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No forms available</option>
+              )}
+            </select>
+          </div>
+
           <button
-            onClick={fetchJobData}
+            onClick={fetchJobAndFormData}
             className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition"
           >
             Generate Job Application
           </button>
 
-          {/* Display Job Details */}
-          {jobDetails && (
+          {/* Display Job Details and Questionnaire */}
+          {jobDetails && questions && (
             <div className="mt-6">
               <h3 className="text-2xl font-semibold">Job Details</h3>
-              {Object.keys(jobDetails).map((key, index) => (
-                <p key={index} className="text-lg">
-                  <strong>{key.replace("Info", "Detail")}:</strong> {jobDetails[key]}
-                </p>
+              <p className="text-lg">
+                <strong>Job ID:</strong> {jobDetails.job_id}
+              </p>
+
+              {Object.keys(jobDetails)
+                .filter((key) => key !== "job_id")
+                .map((key, index) => (
+                  <p key={index} className="text-lg">
+                    <strong>{key.replace("Info", "Detail")}:</strong> {jobDetails[key]}
+                  </p>
+                ))}
+
+              <h3 className="text-2xl font-semibold mt-6">Job Questionnaire</h3>
+              {questions.fields.map((question) => (
+                <div key={question.question_id} className="mt-3">
+                  <p className="text-lg font-bold">{question.question_text}</p>
+
+                  {question.question_type === "text" && (
+                    <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" />
+                  )}
+                  {question.question_type === "radio" &&
+                    question.options.map((opt) => (
+                      <label key={opt} className="block">
+                        <input type="radio" name={question.question_id} value={opt} className="mr-2" /> {opt}
+                      </label>
+                    ))}
+                  {question.question_type === "checkbox" &&
+                    question.options.map((opt) => (
+                      <label key={opt} className="block">
+                        <input type="checkbox" value={opt} className="mr-2" /> {opt}
+                      </label>
+                    ))}
+                  {question.question_type === "file" && <input type="file" className="w-full p-2 border border-gray-300 rounded-lg" />}
+                </div>
               ))}
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="w-full py-3 mt-6 bg-blue-500 text-white text-lg rounded-lg hover:bg-blue-600 transition"
+              >
+                Share
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* ✅ Footer Section */}
-      <footer className="bg-gradient-to-r from-gray-900 to-black text-white py-8 px-12">
-        <div className="container mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* About Section */}
-          <div>
-            <h2 className="text-2xl font-bold">HireEasy</h2>
-            <p className="mt-3 text-gray-400">
-              HireEasy helps recruiters connect with the best talent by streamlining job postings, 
-              applications, and hiring processes efficiently.
-            </p>
-          </div>
-
-          {/* Office Information */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Office</h3>
-            <p>123 Recruitment St,</p>
-            <p>New York, USA</p>
-            <p>Email: contact@hireeasy.com</p>
-            <p>Phone: +1 234-567-890</p>
-          </div>
-
-          {/* Useful Links */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <a href="#" className="hover:text-gray-300 transition">
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gray-300 transition">
-                  Job Listings
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gray-300 transition">
-                  About Us
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-gray-300 transition">
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Newsletter */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Newsletter</h3>
-            <p className="text-gray-400 mb-3">Subscribe to stay updated with the latest job postings.</p>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full p-2 rounded-l-lg text-black"
-              />
-              <button className="bg-blue-500 px-4 rounded-r-lg hover:bg-blue-600 transition">
-                ➝
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Footer */}
-        <div className="text-center text-gray-400 mt-8">
-          HireEasy © {new Date().getFullYear()} - All Rights Reserved
-        </div>
-      </footer>
     </div>
   );
 }

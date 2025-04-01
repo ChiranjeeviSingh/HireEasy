@@ -2,15 +2,16 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function JobPosting() {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Hook for navigation
 
+  // Initial form state
   const initialState = {
-    JobID: "",
-    Info1: "",
-    Info2: "",
-    Info3: "",
-    Info4: "",
-    Info5: "",
+    JobID: "", // Separate Job ID
+    Info1: "", // Job Location
+    Info2: "", // Job Title
+    Info3: "", // Job Description
+    Info4: "", // Experience Required
+    Info5: "", // Skills Required
     Info6: "",
     Info7: "",
     Info8: "",
@@ -20,10 +21,10 @@ export function JobPosting() {
 
   const placeholders = {
     Info1: "Enter Job Location",
-    Info2: "Enter Job Description",
-    Info3: "Enter Salary Details",
+    Info2: "Enter Job Title",
+    Info3: "Enter Job Description",
     Info4: "Enter Experience Required",
-    Info5: "Additional Info",
+    Info5: "Skills Required (comma-separated, e.g., Go, JavaScript, Python)",
     Info6: "Additional Info",
     Info7: "Additional Info",
     Info8: "Additional Info",
@@ -33,30 +34,100 @@ export function JobPosting() {
 
   const [jobData, setJobData] = useState(initialState);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
+
+  // Handle input changes
   const handleChange = (e) => {
     setJobData({ ...jobData, [e.target.name]: e.target.value });
   };
 
+  // Remove optional fields (set them to "none")
   const handleRemove = (infoKey) => {
     setJobData({ ...jobData, [infoKey]: "none" });
   };
 
-  const handleSubmit = (e) => {
+  // Submit form
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Job Created:", jobData);
-    alert("Job Posted Successfully!");
-    setFormSubmitted(true);
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    const token = localStorage.getItem("token"); // Get JWT token
+
+    // Map frontend fields to backend structure
+    const jobDataMapped = {
+      job_id: jobData.JobID.trim(),
+      job_title: jobData.Info2.trim(),
+      job_description: jobData.Info3.trim(),
+      job_status: "Open",
+      skills_required: jobData.Info5.trim()
+        ? jobData.Info5.split(",").map(skill => skill.trim())
+        : [],
+      location: jobData.Info1.trim() || "EMPTY",
+      experience: jobData.Info4.trim() || "EMPTY",
+      info6: jobData.Info6.trim() || "EMPTY",
+      info7: jobData.Info7.trim() || "EMPTY",
+      info8: jobData.Info8.trim() || "EMPTY",
+      info9: jobData.Info9.trim() || "EMPTY",
+      info10: jobData.Info10.trim() || "EMPTY",
+    };
+
+    console.log("Mapped Job Data:", jobDataMapped);
+
+    if (
+      !jobDataMapped.job_id ||
+      !jobDataMapped.job_title ||
+      !jobDataMapped.job_description ||
+      !jobDataMapped.location ||
+      !jobDataMapped.experience ||
+      jobDataMapped.skills_required.length === 0
+    ) {
+      setError("Please fill in all required fields and provide at least one skill.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/jobs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(jobDataMapped),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.msg || "Failed to create job posting.");
+      }
+
+      setSuccess(`Job with ID "${data.jobId}" created successfully!`);
+      setFormSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Reset form for a new job
   const handleNewJob = () => {
     setJobData(initialState);
     setFormSubmitted(false);
+    setSuccess("");
+    setError("");
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
-      {/* ✅ Dashboard Button in Top-Left */}
+      {/* ✅ Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
         className="absolute top-4 left-4 px-4 py-2 text-lg bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
@@ -64,19 +135,20 @@ export function JobPosting() {
         ⬅️ Dashboard
       </button>
 
-      {/* ✅ Job Posting Form Section (Card Style) */}
+      {/* ✅ Job Posting Form Section */}
       <div className="flex-grow flex justify-center items-center">
         <div className="bg-white shadow-2xl rounded-xl p-8 w-full max-w-3xl">
           <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
             Create Job Posting
           </h2>
 
+          {error && <p className="text-red-500 text-center">{error}</p>}
+          {success && <p className="text-green-500 text-center">{success}</p>}
+
           <form onSubmit={handleSubmit}>
             {/* Job ID Field */}
             <div className="mb-4">
-              <label className="block font-medium mb-1 text-lg">
-                Job ID (Required):
-              </label>
+              <label className="block font-medium mb-1 text-lg">Job ID (Required):</label>
               <input
                 type="text"
                 name="JobID"
@@ -88,12 +160,10 @@ export function JobPosting() {
               />
             </div>
 
-            {/* Job Fields (Info1 - Info5 always visible) */}
+            {/* Job Fields */}
             {["Info1", "Info2", "Info3", "Info4", "Info5"].map((key, index) => (
               <div key={index} className="mb-4">
-                <label className="block font-medium mb-1 text-lg">
-                  {placeholders[key]}:
-                </label>
+                <label className="block font-medium mb-1 text-lg">{placeholders[key]}:</label>
                 <textarea
                   name={key}
                   value={jobData[key]}
@@ -107,13 +177,8 @@ export function JobPosting() {
 
             {/* Info6 - Info10 with Remove Button */}
             {["Info6", "Info7", "Info8", "Info9", "Info10"].map((key, index) => (
-              <div
-                key={index}
-                className={`mb-4 ${jobData[key] === "none" ? "hidden" : "block"}`}
-              >
-                <label className="block font-medium mb-1 text-lg">
-                  {placeholders[key]}:
-                </label>
+              <div key={index} className={`mb-4 ${jobData[key] === "none" ? "hidden" : "block"}`}>
+                <label className="block font-medium mb-1 text-lg">{placeholders[key]}:</label>
                 <textarea
                   name={key}
                   value={jobData[key]}
@@ -136,8 +201,9 @@ export function JobPosting() {
             <button
               type="submit"
               className="w-full py-3 mt-6 bg-green-500 text-white rounded-lg text-lg hover:bg-green-600 transition"
+              disabled={loading}
             >
-              Post Job
+              {loading ? "Posting Job..." : "Post Job"}
             </button>
 
             {formSubmitted && (
@@ -152,42 +218,6 @@ export function JobPosting() {
           </form>
         </div>
       </div>
-
-      {/* ✅ Footer Section */}
-      <footer className="bg-gray-900 text-white py-6 px-12">
-        <div className="container mx-auto flex flex-col md:flex-row justify-between">
-          {/* About Section */}
-          <div>
-            <h2 className="text-2xl font-bold">HireEasy</h2>
-            <p className="mt-3 text-gray-400">
-              Your trusted job portal for connecting top talent with top companies. 
-              Find and post jobs with ease.
-            </p>
-          </div>
-
-          {/* Office Information */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Office</h3>
-            <p>123 Business Park,</p>
-            <p>New York, USA</p>
-            <p>Email: support@hireeasy.com</p>
-            <p>Phone: +1 987-654-3210</p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-xl font-bold mb-3">Quick Links</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="hover:text-gray-300 transition">Dashboard</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition">Job Applications</a></li>
-              <li><a href="#" className="hover:text-gray-300 transition">View Jobs</a></li>
-            </ul>
-          </div>
-        </div>
-        <div className="text-center text-gray-400 mt-6">
-          HireEasy © {new Date().getFullYear()} - All Rights Reserved
-        </div>
-      </footer>
     </div>
   );
 }
