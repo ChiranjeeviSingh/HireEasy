@@ -6,6 +6,7 @@ import (
     "backend/internal/models"
 	"github.com/lib/pq"
 	"errors"
+	"strings"
 )
 
 
@@ -30,11 +31,17 @@ func CreateProfile(ctx context.Context, req *models.Profile) error {
 		return ErrProfileExists
 	}
 
+	// Convert all strings in Areas_of_expertise to lowercase
+	lowerCaseAOE := make([]string, len(req.Areas_of_expertise))
+	for i, area := range req.Areas_of_expertise {
+		lowerCaseAOE[i] = strings.ToLower(area)
+	}
+
 	// If no profile exists, create new one
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO profiles (user_id, job_title, years_of_experience, areas_of_expertise, phone_number)
 		 VALUES ($1, $2, $3, $4, $5)`,
-		userID, req.JobTitle, req.YearsOfExperience, pq.Array(req.Areas_of_expertise), req.PhoneNumber)
+		userID, req.JobTitle, req.YearsOfExperience, pq.Array(lowerCaseAOE), req.PhoneNumber)
 	
 	return err
 }
@@ -69,11 +76,17 @@ func UpdateMyProfile(ctx context.Context, req *models.Profile) error {
 
 	userID := ctx.Value("userID")
 	
+	// Convert all strings in Areas_of_expertise to lowercase
+	lowerCaseAOE := make([]string, len(req.Areas_of_expertise))
+	for i, area := range req.Areas_of_expertise {
+		lowerCaseAOE[i] = strings.ToLower(area)
+	}
+
 	_, err := db.ExecContext(ctx,
 		`UPDATE profiles 
 		 SET job_title = $2, years_of_experience = $3, areas_of_expertise = $4, phone_number = $5
 		 WHERE user_id = $1`,
-		userID, req.JobTitle, req.YearsOfExperience, pq.Array(req.Areas_of_expertise), req.PhoneNumber)
+		userID, req.JobTitle, req.YearsOfExperience, pq.Array(lowerCaseAOE), req.PhoneNumber)
 	
 	return err
 }

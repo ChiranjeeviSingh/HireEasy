@@ -57,6 +57,16 @@ func SetupRoutes(router *gin.Engine) {
         profiles.PUT("", handlers.UpdateMyProfileH)      // Update own profile
         profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
     }
-    
+
+    // Availability routes
+    availability := api.Group("/availability")
+    {
+        availability.POST("", handlers.CreateAvailabilityH)         // Create availability slot(Interviewer action)
+        availability.DELETE("/:id", handlers.DeleteAvailabilityH)   // Delete availability slot(Interviewer action)
+        availability.GET("/me", handlers.GetMyAvailabilityH)       // Get own availability using JWT token with optional date range
+        availability.GET("/user/:user_name", handlers.GetUserAvailabilityH)  // Get specific user's availability(using user's username)
+        availability.GET("", handlers.GetAllAvailabilityH)         // Get all available people with with optional date range, profile filters
+    }
+
 
 }
