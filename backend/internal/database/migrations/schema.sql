@@ -1,11 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- DROP TABLE IF EXISTS application_form CASCADE;
--- DROP TABLE IF EXISTS form_templates CASCADE;
--- DROP TABLE IF EXISTS jobs CASCADE;
--- DROP TABLE IF EXISTS users CASCADE;
--- DROP TABLE IF EXISTS profiles CASCADE;
-
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -61,7 +55,6 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
----remove job_submissions after main is pulled
 CREATE TABLE IF NOT EXISTS job_submissions (
     id SERIAL PRIMARY KEY,
     form_uuid VARCHAR(255) NOT NULL REFERENCES form_templates(form_template_id) ON DELETE CASCADE,
@@ -106,3 +99,9 @@ CREATE INDEX IF NOT EXISTS idx_jobs_title ON jobs(job_title);
 CREATE INDEX IF NOT EXISTS idx_availabilities_user ON availabilities (user_id, date);
 CREATE INDEX IF NOT EXISTS idx_availabilities_time ON availabilities (date, from_time, to_time);
 CREATE INDEX IF NOT EXISTS idx_interview_availabilities ON interviews (availability_id);
+
+CREATE INDEX  IF NOT EXISTS idx_job_submissions_job ON job_submissions(form_uuid);
+CREATE INDEX  IF NOT EXISTS idx_job_submissions_ats ON job_submissions(ats_score DESC);
+
+-- Create a unique constraint to prevent duplicate job submissions
+ALTER TABLE job_submissions ADD CONSTRAINT unique_job_submission UNIQUE (job_id, email);
