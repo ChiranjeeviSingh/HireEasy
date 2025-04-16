@@ -99,7 +99,7 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 		Skills:    pq.StringArray(skills),
 		ResumeURL: resumeURL,
 		ATSScore:  int(atsScore),
-		Status:    "pending",
+		Status:    "applied",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
