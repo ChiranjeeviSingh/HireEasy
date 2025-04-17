@@ -15,11 +15,13 @@ import (
 	"backend/internal/database"
 	"backend/internal/models"
 	"backend/internal/services"
+	"backend/internal/api/handlers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
 )
 
 var router *gin.Engine
@@ -55,7 +57,7 @@ func CreateHandleFormSubmissionWithCustomUploader(uploader func(*multipart.FileH
 		defer func() { uploadResumeFunc = originalUploader }()
 		
 		// Call the actual handler
-		HandleFormSubmission(c)
+		handlers.HandleFormSubmission(c)
 	}
 }
 
@@ -71,8 +73,8 @@ func TestMain(m *testing.M) {
 	router = gin.Default()
 
 	// Register only required routes to avoid import cycles
-	router.GET("/api/forms/:form_uuid/submissions", GetFormSubmissions)
-	router.POST("/api/forms/:form_uuid/submit", HandleFormSubmission)
+	router.GET("/api/forms/:form_uuid/submissions", handlers.GetFormSubmissions)
+	router.POST("/api/forms/:form_uuid/submit", handlers.HandleFormSubmission)
 
 	setupTestDB() // Set up test data
 	log.Println("Test database setup complete")
@@ -90,8 +92,8 @@ func setupTestDB() {
 		log.Fatal("Failed to clear job_submissions:", err)
 	}
 
-	// Step 2: Delete form templates (depends on jobs)
-	_, err = db.Exec("DELETE FROM form_templates WHERE job_id IN ('5678')")
+	// Step 2: Delete form template with specific form UUID
+	_, err = db.Exec("DELETE FROM form_templates WHERE form_template_id = '4d9a4320-f1d1-43f2-8477-edd07f557442'")
 	if err != nil {
 		log.Fatal("Failed to clear form_templates:", err)
 	}
@@ -127,8 +129,12 @@ func setupTestDB() {
 
 	// 🔹 Insert test form templates
 	_, err = db.Exec(`
-		INSERT INTO form_templates (id, job_id, fields)
-		VALUES ('4d9a4320-f1d1-43f2-8477-edd07f557442', '5678', '{"skills": "array", "location": "string", "experience": "string"}'::jsonb)`)
+		INSERT INTO form_templates (form_template_id, user_id, fields)
+		VALUES (
+			'4d9a4320-f1d1-43f2-8477-edd07f557442',
+			1001,
+			'{"skills": "array", "location": "string", "experience": "string"}'::jsonb
+		)`)
 	if err != nil {
 		log.Fatal("Failed to insert test form templates:", err)
 	}
@@ -151,7 +157,7 @@ func TestGetFormSubmissions(t *testing.T) {
 	// Set up Gin router
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
-	router.GET("/api/forms/:form_uuid/submissions", GetFormSubmissions)
+	router.GET("/api/forms/:form_uuid/submissions", handlers.GetFormSubmissions)
 
 	// Setup mock database
 	setupTestDB()
@@ -760,7 +766,7 @@ func TestGetFormSubmissions_DateFilter(t *testing.T) {
 	// Set up Gin router
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()
-	router.GET("/api/forms/:form_uuid/submissions", GetFormSubmissions)
+	router.GET("/api/forms/:form_uuid/submissions", handlers.GetFormSubmissions)
 
 	// Setup mock database
 	setupTestDB()

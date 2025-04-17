@@ -49,13 +49,34 @@ func SetupRoutes(router *gin.Engine) {
 			formTemplates.DELETE("/:form_template_id", handlers.DeleteFormTemplateH) // Delete template
 		}
 
-		// Application form routes
-		applicationForms := api.Group("")
-		{
-			applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template
-			applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status
-			applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get form details
-			applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form
-		}
-	}
+        // Application form routes
+        applicationForms := api.Group("")
+        {
+            applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template, return unique URL and form_uuid
+            applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status (active/inactive)
+            applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get job and form template details (unauthenticated)
+            applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form and unlink from job
+        }
+
+
+        // Profile(Interviwer) routes
+        profiles := api.Group("/profiles")
+        {
+            profiles.POST("", handlers.CreateProfileH)          // Create new profile
+            profiles.PUT("", handlers.UpdateMyProfileH)         // Update own profile
+            profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
+            profiles.GET("/user/:user_name", handlers.GetUserProfileH) // Get other users profile
+        }
+
+        // Availability routes
+        availability := api.Group("/availability")
+        {
+            availability.POST("", handlers.CreateAvailabilityH)         // Create availability slot(Interviewer action)
+            availability.DELETE("/:id", handlers.DeleteAvailabilityH)   // Delete availability slot(Interviewer action)
+            availability.GET("/me", handlers.GetMyAvailabilityH)       // Get own availability using JWT token with optional date range
+            availability.GET("/user/:user_name", handlers.GetUserAvailabilityH)  // Get specific user's availability(using user's username)
+            availability.GET("", handlers.GetAllAvailabilityH)         // Get all available people with with optional date range, profile filters
+        }
+   }
+
 }

@@ -14,6 +14,7 @@ type FormSubmissionRequest struct {
 	Username string                `form:"username" binding:"required"`
 	Email    string                `form:"email" binding:"required,email"`
 	FormData string                `form:"form_data" binding:"required"`
+	FormUUID string                `form:"form_uuid" binding:"required"`
 	Resume   *multipart.FileHeader `form:"resume" binding:"required"`
 }
 
@@ -24,6 +25,7 @@ type JobSubmission struct {
 	Username  string         `json:"username" db:"username"`
 	Email     string         `json:"email" db:"email"`
 	FormData  []byte         `json:"-" db:"form_data"` // Store raw JSON, process later
+	FormUUID  string         `json:"form_uuid" db:"form_uuid"`
 	Skills    pq.StringArray `json:"skills" db:"skills"`
 	ResumeURL string         `json:"resume_url" db:"resume_url"`
 	ATSScore  int            `json:"ats_score" db:"ats_score"`

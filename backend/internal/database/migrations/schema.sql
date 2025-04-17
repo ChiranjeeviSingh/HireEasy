@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     username VARCHAR(255) NOT NULL UNIQUE,
+    "role" VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -24,15 +26,38 @@ CREATE TABLE IF NOT EXISTS jobs (
 
 
 CREATE TABLE IF NOT EXISTS form_templates (
-    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    job_id VARCHAR(255) NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
-    fields JSONB NOT NULL, -- Dynamic form fields
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id SERIAL PRIMARY KEY,
+    form_template_id VARCHAR(255) NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    fields JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS application_form (
+    form_uuid UUID PRIMARY KEY DEFAULT uuid_generate_v4(),   -- Auto-generating unique UUID
+    job_id INT NOT NULL,                                     -- id of job table
+    form_id INT NOT NULL,                                    -- id of form_template table
+    status VARCHAR(50) NOT NULL DEFAULT 'active',            -- active, inactive
+    date_created TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,      -- Date when the form is created
+    FOREIGN KEY (job_id) REFERENCES jobs(id),                -- Foreign key reference to the jobs table
+    FOREIGN KEY (form_id) REFERENCES form_templates(id)      -- Foreign key reference to the form_templates table
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    job_title VARCHAR(255),
+    years_of_experience INT,
+    areas_of_expertise TEXT[],
+    phone_number VARCHAR(10) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS job_submissions (
     id SERIAL PRIMARY KEY,
-    form_uuid UUID NOT NULL REFERENCES form_templates(id) ON DELETE CASCADE,
+    form_uuid VARCHAR(255) NOT NULL REFERENCES form_templates(form_template_id) ON DELETE CASCADE,
     job_id VARCHAR(255) NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -42,66 +67,41 @@ CREATE TABLE IF NOT EXISTS job_submissions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS availabilities (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "date" DATE NOT NULL, -- Req Expected format: YYYY-MM-DD
+    from_time TIME(0) NOT NULL,
+    to_time TIME(0) NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS interviews (
+    id SERIAL PRIMARY KEY,
+    job_id INT NOT NULL,
+    hr_user_id INT REFERENCES users(id) ON DELETE SET NULL,
+    job_submission_id INT NOT NULL REFERENCES job_submissions(id),
+    interviewer_user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    availability_id INT NOT NULL REFERENCES availabilities(id) ON DELETE CASCADE,
+    feedback TEXT DEFAULT NULL,
+    "status" VARCHAR(50) DEFAULT 'scheduled', --or completed 
+    UNIQUE (availability_id) -- Ensures an availability slot can only be booked once(this is ensured from application also)
+);
+
 
 -- Add indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_id ON jobs(job_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(job_status);
+CREATE INDEX IF NOT EXISTS idx_jobs_title ON jobs(job_title);
 
-CREATE INDEX idx_job_submissions_job ON job_submissions(form_uuid);
+CREATE INDEX IF NOT EXISTS idx_availabilities_user ON availabilities (user_id, date);
+CREATE INDEX IF NOT EXISTS idx_availabilities_time ON availabilities (date, from_time, to_time);
+CREATE INDEX IF NOT EXISTS idx_interview_availabilities ON interviews (availability_id);
 
-
--- Create index only if it does not exist
-DO $$ 
-BEGIN 
-  -- Ensure user ID index exists in jobs table
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_jobs_user_id') THEN
-    CREATE INDEX idx_jobs_user_id ON jobs(user_id);
-  END IF;
-
-  -- Ensure job submissions index exists
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_job_submissions_job') THEN
-    CREATE INDEX idx_job_submissions_job ON job_submissions(job_id);
-  END IF;
-
-  -- Fix incorrect index name (was idx_jobs_submissions)
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_jobs_id') THEN
-    CREATE INDEX idx_jobs_id ON jobs(job_id);
-  END IF;
-
-  -- Ensure job status index exists
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_jobs_status') THEN
-    CREATE INDEX idx_jobs_status ON jobs(job_status);
-  END IF;
-
-  -- Ensure job title index exists
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_jobs_title') THEN
-    CREATE INDEX idx_jobs_title ON jobs(job_title);
-  END IF;
-
-  -- Ensure ATS score index exists for job submissions
-  IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_job_submissions_ats') THEN
-    CREATE INDEX idx_job_submissions_ats ON job_submissions(ats_score DESC);
-  END IF;
-END $$;
-
--- Add triggers to auto-update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger for jobs table
-CREATE TRIGGER update_jobs_updated_at
-BEFORE UPDATE ON jobs
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
--- Create trigger for users table
-CREATE TRIGGER update_users_updated_at
-BEFORE UPDATE ON users
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
+CREATE INDEX  IF NOT EXISTS idx_job_submissions_job ON job_submissions(form_uuid);
+CREATE INDEX  IF NOT EXISTS idx_job_submissions_ats ON job_submissions(ats_score DESC);
 
 -- Create a unique constraint to prevent duplicate job submissions
 ALTER TABLE job_submissions ADD CONSTRAINT unique_job_submission UNIQUE (job_id, email);

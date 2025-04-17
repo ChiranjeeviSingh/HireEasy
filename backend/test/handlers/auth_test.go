@@ -26,6 +26,8 @@ func TestRegisterUserH(t *testing.T) {
 		"email":    "test@example.com",
 		"password": "password123",
 		"username": "testuser",
+		"role": "HR",
+		"company_name": "TCS",
 	}
 	jsonBody, _ := json.Marshal(requestBody)
 	req, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(jsonBody))
