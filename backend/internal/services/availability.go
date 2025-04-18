@@ -1,38 +1,38 @@
 package services
 
 import (
-    "backend/internal/database"
-    "backend/internal/models"
-    "context"
-    "errors"
-	"fmt"
-	"github.com/gin-gonic/gin"
-	"time"
+	"backend/internal/database"
+	"backend/internal/models"
+	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"
 )
 
 var (
 	ErrMaxDurationExceeded = errors.New("time slot cannot be more than one hour")
-	ErrInvalidTime = errors.New("invalid start/end time")
-	ErrOverlappingSlot = errors.New("overlapping time slot exists")
-	ErrSlotScheduled = errors.New("cannot delete: slot is scheduled for interview. Conact Recruiter")
-	ErrNoAvailability = errors.New("no availability found with this id")
-	ErrUsernameNotFound = errors.New("no user exists with given username")
+	ErrInvalidTime         = errors.New("invalid start/end time")
+	ErrOverlappingSlot     = errors.New("overlapping time slot exists")
+	ErrSlotScheduled       = errors.New("cannot delete: slot is scheduled for interview. Conact Recruiter")
+	ErrNoAvailability      = errors.New("no availability found with this id")
+	ErrUsernameNotFound    = errors.New("no user exists with given username")
 )
-
 
 func CreateAvailability(ctx context.Context, req *models.Availability) error {
 	db := database.GetDB()
 	userID := ctx.Value("userID")
 
 	// Parse time strings into time.Time
-	fromTime, err := time.Parse("15:04", req.FromTime)
+	fromTime, err := time.Parse("15:04:05", req.FromTime)
 	if err != nil {
 		return ErrInvalidTime
 	}
-	toTime, err := time.Parse("15:04", req.ToTime)
+	toTime, err := time.Parse("15:04:05", req.ToTime)
 	if err != nil {
 		return ErrInvalidTime
 	}
@@ -44,9 +44,9 @@ func CreateAvailability(ctx context.Context, req *models.Availability) error {
 
 	// Validate hours, minutes and seconds
 	if fromTime.Hour() < 0 || fromTime.Hour() > 23 ||
-	   toTime.Hour() < 0 || toTime.Hour() > 23 ||
-	   fromTime.Minute() < 0 || fromTime.Minute() > 59 ||
-	   toTime.Minute() < 0 || toTime.Minute() > 59 {
+		toTime.Hour() < 0 || toTime.Hour() > 23 ||
+		fromTime.Minute() < 0 || fromTime.Minute() > 59 ||
+		toTime.Minute() < 0 || toTime.Minute() > 59 {
 		return ErrInvalidTime
 	}
 
@@ -80,6 +80,7 @@ func CreateAvailability(ctx context.Context, req *models.Availability) error {
 		return err
 	}
 	req.ID = id
+	req.UserID = userID.(int)
 	return err
 }
 
@@ -126,7 +127,7 @@ func GetMyAvailability(ctx *gin.Context) ([]*models.Availability, error) {
 
 func GetUserAvailability(ctx *gin.Context, userName string) ([]*models.Availability, error) {
 	db := database.GetDB()
-	
+
 	var userID int
 	err := db.GetContext(ctx.Request.Context(), &userID, `
 		SELECT id FROM users WHERE userName = $1`, userName)
@@ -143,14 +144,14 @@ func GetUserAvailability(ctx *gin.Context, userName string) ([]*models.Availabil
 func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availability, error) {
 	db := database.GetDB()
 	availabilities := []*models.Availability{}
-	
+
 	fromDate := ctx.Query("from_date")
-    toDate := ctx.Query("to_date")
-	
+	toDate := ctx.Query("to_date")
+
 	query := `SELECT id, user_id, date, from_time, to_time, created_at, updated_at
 		FROM availabilities 
 		WHERE user_id = $1`
-	
+
 	args := []interface{}{userID}
 	argCount := 2
 
@@ -191,23 +192,23 @@ func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availabi
 
 		formattedFromTime, err := time.Parse(time.RFC3339, availability.FromTime)
 		if err != nil {
-			// Try parsing as "15:04" if RFC3339 fails
-			formattedFromTime, err = time.Parse("15:04", availability.FromTime)
+			// Try parsing as "15:04:05" if RFC3339 fails
+			formattedFromTime, err = time.Parse("15:04:05", availability.FromTime)
 			if err != nil {
 				return nil, err
 			}
 		}
-		availability.FromTime = formattedFromTime.Format("15:04")
+		availability.FromTime = formattedFromTime.Format("15:04:05")
 
 		formattedToTime, err := time.Parse(time.RFC3339, availability.ToTime)
 		if err != nil {
-			// Try parsing as "15:04" if RFC3339 fails
-			formattedToTime, err = time.Parse("15:04", availability.ToTime)
+			// Try parsing as "15:04:05" if RFC3339 fails
+			formattedToTime, err = time.Parse("15:04:05", availability.ToTime)
 			if err != nil {
 				return nil, err
 			}
 		}
-		availability.ToTime = formattedToTime.Format("15:04")
+		availability.ToTime = formattedToTime.Format("15:04:05")
 
 		availabilities = append(availabilities, availability)
 	}
@@ -215,19 +216,18 @@ func getUserAvailabilityHelper(ctx *gin.Context, userID int) ([]*models.Availabi
 	return availabilities, nil
 }
 
-
 func GetAllAvailability(ctx *gin.Context) ([]*models.GetAllAvailability, error) {
 	db := database.GetDB()
 	availabilities := []*models.GetAllAvailability{}
-	
+
 	fromDate := ctx.Query("from_date")
-    toDate := ctx.Query("to_date")
+	toDate := ctx.Query("to_date")
 	yearsExperience := ctx.Query("years_experience")
-	jobTitle:= ctx.Query("job_title")
+	jobTitle := ctx.Query("job_title")
 
 	var areasOfExpertise []string
 	if expertise := ctx.Query("areas_of_expertise"); expertise != "" {
-    	areasOfExpertise = strings.Split(strings.ToLower(expertise), ",")
+		areasOfExpertise = strings.Split(strings.ToLower(expertise), ",")
 	}
 
 	query := `SELECT DISTINCT a.id, a.user_id, u.username, a.from_time, a.to_time, a.date, a.created_at, a.updated_at
@@ -235,7 +235,7 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.GetAllAvailability, error) 
 		JOIN users u ON a.user_id = u.id
 		LEFT JOIN profiles p ON u.id = p.user_id
 		WHERE 1=1`
-	
+
 	args := []interface{}{}
 	argCount := 1
 
@@ -268,7 +268,6 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.GetAllAvailability, error) 
 		args = append(args, pq.Array(areasOfExpertise))
 		argCount++
 	}
-	
 
 	query += ` ORDER BY a.from_time`
 
@@ -296,23 +295,23 @@ func GetAllAvailability(ctx *gin.Context) ([]*models.GetAllAvailability, error) 
 
 		formattedFromTime, err := time.Parse(time.RFC3339, availability.FromTime)
 		if err != nil {
-			// Try parsing as "15:04" if RFC3339 fails
-			formattedFromTime, err = time.Parse("15:04", availability.FromTime)
+			// Try parsing as "15:04:05" if RFC3339 fails
+			formattedFromTime, err = time.Parse("15:04:05", availability.FromTime)
 			if err != nil {
 				return nil, err
 			}
 		}
-		availability.FromTime = formattedFromTime.Format("15:04")
+		availability.FromTime = formattedFromTime.Format("15:04:05")
 
 		formattedToTime, err := time.Parse(time.RFC3339, availability.ToTime)
 		if err != nil {
-			// Try parsing as "15:04" if RFC3339 fails
-			formattedToTime, err = time.Parse("15:04", availability.ToTime)
+			// Try parsing as "15:04:05" if RFC3339 fails
+			formattedToTime, err = time.Parse("15:04:05", availability.ToTime)
 			if err != nil {
 				return nil, err
 			}
 		}
-		availability.ToTime = formattedToTime.Format("15:04")
+		availability.ToTime = formattedToTime.Format("15:04:05")
 
 		availabilities = append(availabilities, availability)
 	}

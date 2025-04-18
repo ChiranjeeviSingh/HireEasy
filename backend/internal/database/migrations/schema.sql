@@ -77,18 +77,21 @@ CREATE TABLE IF NOT EXISTS availabilities (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+
 CREATE TABLE IF NOT EXISTS interviews (
     id SERIAL PRIMARY KEY,
-    job_id INT NOT NULL,
+    job_id VARCHAR(255) NOT NULL REFERENCES jobs(job_id),
     hr_user_id INT REFERENCES users(id) ON DELETE SET NULL,
     job_submission_id INT NOT NULL REFERENCES job_submissions(id),
     interviewer_user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     availability_id INT NOT NULL REFERENCES availabilities(id) ON DELETE CASCADE,
     feedback TEXT DEFAULT NULL,
-    "status" VARCHAR(50) DEFAULT 'scheduled', --or completed 
+    verdict VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, passed, failed
+    "status" VARCHAR(50) NOT NULL DEFAULT 'scheduled', --pending_feedback, completed 
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
     UNIQUE (availability_id) -- Ensures an availability slot can only be booked once(this is ensured from application also)
 );
-
 
 -- Add indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);

@@ -57,8 +57,8 @@ func TestCreateAvailabilityH(t *testing.T) {
 
 	requestBody := map[string]interface{}{
 		"date":      tomorrow.Format("2006-01-02"),
-		"from_time": tomorrow.Format("15:04"),
-		"to_time":   tomorrow.Add(1 * time.Hour).Format("15:04"),
+		"from_time": tomorrow.Format("15:04:05"),
+		"to_time":   tomorrow.Add(1 * time.Hour).Format("15:04:05"),
 	}
 	jsonBody, _ := json.Marshal(requestBody)
 	req, _ := http.NewRequest("POST", "/api/availability", bytes.NewBuffer(jsonBody))
@@ -120,7 +120,7 @@ func TestDeleteAvailabilityH(t *testing.T) {
 	err = db.QueryRow(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)
 					 RETURNING id`,
-		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04"), tomorrow.Add(1*time.Hour).Format("15:04")).Scan(&availabilityID)
+		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04:05"), tomorrow.Add(1*time.Hour).Format("15:04:05")).Scan(&availabilityID)
 	assert.NoError(t, err)
 
 	router := test.SetupTestRouter()
@@ -190,13 +190,13 @@ func TestGetMyAvailabilityH(t *testing.T) {
 	// First slot: 9-10 AM tomorrow
 	_, err = db.Exec(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)`,
-		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04"), tomorrow.Add(1*time.Hour).Format("15:04"))
+		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04:05"), tomorrow.Add(1*time.Hour).Format("15:04:05"))
 	assert.NoError(t, err)
 
 	// Second slot: 2-3 PM tomorrow
 	_, err = db.Exec(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)`,
-		userID, tomorrow.Format("2006-01-02"), tomorrow.Add(5*time.Hour).Format("15:04"), tomorrow.Add(6*time.Hour).Format("15:04"))
+		userID, tomorrow.Format("2006-01-02"), tomorrow.Add(5*time.Hour).Format("15:04:05"), tomorrow.Add(6*time.Hour).Format("15:04:05"))
 	assert.NoError(t, err)
 
 	router := test.SetupTestRouter()
@@ -274,7 +274,7 @@ func TestGetUserAvailabilityH(t *testing.T) {
 	// Slot: 11-12 tomorrow
 	_, err = db.Exec(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)`,
-		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04"), tomorrow.Add(1*time.Hour).Format("15:04"))
+		userID, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04:05"), tomorrow.Add(1*time.Hour).Format("15:04:05"))
 	assert.NoError(t, err)
 
 	router := test.SetupTestRouter()
@@ -359,13 +359,13 @@ func TestGetAllAvailabilityH(t *testing.T) {
 	// Slot for first user: 10-11 tomorrow
 	_, err = db.Exec(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)`,
-		userID1, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04"), tomorrow.Add(1*time.Hour).Format("15:04"))
+		userID1, tomorrow.Format("2006-01-02"), tomorrow.Format("15:04:05"), tomorrow.Add(1*time.Hour).Format("15:04:05"))
 	assert.NoError(t, err)
 
 	// Slot for second user: 2-3 PM tomorrow
 	_, err = db.Exec(`INSERT INTO availabilities (user_id, date, from_time, to_time)
 	                 VALUES ($1, $2, $3, $4)`,
-		userID2, tomorrow.Format("2006-01-02"), tomorrow.Add(4*time.Hour).Format("15:04"), tomorrow.Add(5*time.Hour).Format("15:04"))
+		userID2, tomorrow.Format("2006-01-02"), tomorrow.Add(4*time.Hour).Format("15:04:05"), tomorrow.Add(5*time.Hour).Format("15:04:05"))
 	assert.NoError(t, err)
 
 	router := test.SetupTestRouter()
