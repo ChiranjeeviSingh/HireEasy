@@ -25,9 +25,6 @@ func SetupTestDB() *sql.DB {
 
 	cfg := config.GetConfig().DBConfig
 
-	// Use a separate test database
-	testDbName := cfg.Dbname + "_test"
-
 	// First connect to default database to create test database if it doesn't exist
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Dbname)
@@ -38,6 +35,9 @@ func SetupTestDB() *sql.DB {
 	}
 	defer db.Close()
 
+	// Use a separate test database
+	testDbName := "app_db_test"
+	
 	// Create test database if it doesn't exist
 	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", testDbName))
 	if err != nil && !isDatabaseExistsError(err) {

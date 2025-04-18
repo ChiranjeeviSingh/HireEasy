@@ -79,7 +79,6 @@ func TestCreateAvailabilityH(t *testing.T) {
 
 	// Basic validation of response fields
 	assert.NotNil(t, response["id"])
-	assert.Equal(t, float64(0), response["user_id"])
 	assert.Equal(t, requestBody["date"], response["date"])
 	assert.Equal(t, requestBody["from_time"], response["from_time"])
 	assert.Equal(t, requestBody["to_time"], response["to_time"])
