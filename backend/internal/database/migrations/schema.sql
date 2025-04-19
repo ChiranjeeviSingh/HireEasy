@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 CREATE TABLE IF NOT EXISTS job_submissions (
     id SERIAL PRIMARY KEY,
-    form_uuid VARCHAR(255) NOT NULL REFERENCES form_templates(form_template_id) ON DELETE CASCADE,
+    form_uuid UUID NOT NULL REFERENCES application_form(form_uuid) ON DELETE CASCADE,
     job_id VARCHAR(255) NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
     username VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
