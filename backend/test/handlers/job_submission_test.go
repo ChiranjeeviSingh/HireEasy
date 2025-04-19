@@ -11,17 +11,15 @@ import (
 	"os"
 	"testing"
 
-	"backend/internal/config"
-	"backend/internal/database"
+	"backend/internal/api/handlers"
 	"backend/internal/models"
 	"backend/internal/services"
-	"backend/internal/api/handlers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
+	"backend/test"
 )
 
 var router *gin.Engine
@@ -55,7 +53,7 @@ func CreateHandleFormSubmissionWithCustomUploader(uploader func(*multipart.FileH
 		uploadResumeFunc = uploader
 		// Restore after the handler completes
 		defer func() { uploadResumeFunc = originalUploader }()
-		
+
 		// Call the actual handler
 		handlers.HandleFormSubmission(c)
 	}
@@ -64,19 +62,13 @@ func CreateHandleFormSubmissionWithCustomUploader(uploader func(*multipart.FileH
 func TestMain(m *testing.M) {
 	log.Println("Initializing test environment...")
 
-	config.LoadConfig()
-	database.Connect()
-	
-	// Store original DB
-	originalDB = database.GetDB()
-
 	router = gin.Default()
 
 	// Register only required routes to avoid import cycles
 	router.GET("/api/forms/:form_uuid/submissions", handlers.GetFormSubmissions)
 	router.POST("/api/forms/:form_uuid/submit", handlers.HandleFormSubmission)
 
-	setupTestDB() // Set up test data
+	setupTestDB() // Set up test db and data
 	log.Println("Test database setup complete")
 
 	exitCode := m.Run()
@@ -84,7 +76,8 @@ func TestMain(m *testing.M) {
 }
 
 func setupTestDB() {
-	db := database.GetDB()
+
+	db := test.SetupTestDB()
 
 	// Step 1: Delete job submissions first (depends on jobs)
 	_, err := db.Exec("DELETE FROM job_submissions")
@@ -112,9 +105,9 @@ func setupTestDB() {
 
 	// 🔹 Insert test users (Ensure unique ID)
 	_, err = db.Exec(`
-		INSERT INTO users (id, username, email, password_hash) 
-		VALUES (1001, 'John Doe', 'john@example.com', 'hashedpassword'),
-			   (1002, 'Jane Doe', 'jane@example.com', 'hashedpassword')`)
+		INSERT INTO users (id, username, email, password_hash, role, company_name) 
+		VALUES (1001, 'John Doe', 'john@example.com', 'hashedpassword', 'HR', 'Test Company'),
+			   (1002, 'Jane Doe', 'jane@example.com', 'hashedpassword', 'HR', 'Test Company')`)
 	if err != nil {
 		log.Fatal("Failed to insert test users:", err)
 	}
@@ -141,11 +134,12 @@ func setupTestDB() {
 
 	// 🔹 Insert test job submissions
 	_, err = db.Exec(`
-		INSERT INTO job_submissions (job_id, user_id, form_uuid, form_data, skills, resume_url, ats_score)
+		INSERT INTO job_submissions (form_uuid, job_id, username, email, form_data, skills, resume_url, ats_score, status)
 		VALUES
-			('5678', 1001, '4d9a4320-f1d1-43f2-8477-edd07f557442', '{"experience":"5 years","location":"Remote","skills":["Go","AWS"]}', '{"Go", "AWS"}', 'https://s3.aws.com/resume1.pdf', 95),
-			('5678', 1002, '4d9a4320-f1d1-43f2-8477-edd07f557442', '{"experience":"3 years","location":"Onsite","skills":["Java","Docker"]}', '{"Java", "Docker"}', 'https://s3.aws.com/resume2.pdf', 88);
+			('4d9a4320-f1d1-43f2-8477-edd07f557442', '5678', 'John Doe', 'john@example.com', '{"experience":"5 years","location":"Remote","skills":["Go","AWS"]}', ARRAY['Go', 'AWS'], 'https://s3.aws.com/resume1.pdf', 95, 'applied'),
+			('4d9a4320-f1d1-43f2-8477-edd07f557442', '5678', 'Jane Doe', 'jane@example.com', '{"experience":"3 years","location":"Onsite","skills":["Java","Docker"]}', ARRAY['Java', 'Docker'], 'https://s3.aws.com/resume2.pdf', 88, 'applied');
 	`)
+
 	if err != nil {
 		log.Fatal("Failed to insert test job submissions:", err)
 	}
@@ -230,11 +224,11 @@ func createTestMultipartRequest(t *testing.T, url string, formValues map[string]
 func TestHandleFormSubmission_Success(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with a unique email to avoid constraint violation
 	formValues := map[string]string{
 		"job_id":    "5678",
-		"user_id":   "1003", 
+		"user_id":   "1003",
 		"username":  "Test User",
 		"email":     "test_unique_email@example.com", // Unique email
 		"form_data": `{"experience":"2 years", "location":"Remote", "skills":["Go", "AWS"]}`,
@@ -249,7 +243,7 @@ func TestHandleFormSubmission_Success(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with custom handler
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -260,16 +254,16 @@ func TestHandleFormSubmission_Success(t *testing.T) {
 		t.Logf("Response Body: %s", recorder.Body.String())
 	}
 	assert.Equal(t, http.StatusOK, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for success message
 	assert.Contains(t, response, "message")
 	assert.Equal(t, "Submission received successfully", response["message"])
-	
+
 	// Check ATS score was calculated
 	assert.Contains(t, response, "ats_score")
 }
@@ -277,7 +271,7 @@ func TestHandleFormSubmission_Success(t *testing.T) {
 func TestHandleFormSubmission_DuplicateApplication(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values for a user who already applied (user_id 1001, job_id 5678)
 	formValues := map[string]string{
 		"job_id":    "5678",
@@ -296,7 +290,7 @@ func TestHandleFormSubmission_DuplicateApplication(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with custom handler
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -304,12 +298,12 @@ func TestHandleFormSubmission_DuplicateApplication(t *testing.T) {
 
 	// Assert response - should fail with duplicate application error
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "User has already applied for this job", response["error"])
@@ -318,7 +312,7 @@ func TestHandleFormSubmission_DuplicateApplication(t *testing.T) {
 func TestHandleFormSubmission_InvalidFormData(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with invalid form_data JSON
 	formValues := map[string]string{
 		"job_id":    "5678",
@@ -337,7 +331,7 @@ func TestHandleFormSubmission_InvalidFormData(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -345,12 +339,12 @@ func TestHandleFormSubmission_InvalidFormData(t *testing.T) {
 
 	// Assert response - should fail with invalid form data
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Invalid form data format", response["error"])
@@ -359,7 +353,7 @@ func TestHandleFormSubmission_InvalidFormData(t *testing.T) {
 func TestHandleFormSubmission_InvalidUUID(t *testing.T) {
 	// Set up an invalid form UUID
 	formUUID := "invalid-uuid"
-	
+
 	// Create form values
 	formValues := map[string]string{
 		"job_id":    "5678",
@@ -378,7 +372,7 @@ func TestHandleFormSubmission_InvalidUUID(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -386,12 +380,12 @@ func TestHandleFormSubmission_InvalidUUID(t *testing.T) {
 
 	// Assert response - should fail with invalid UUID
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Invalid form_uuid", response["error"])
@@ -400,7 +394,7 @@ func TestHandleFormSubmission_InvalidUUID(t *testing.T) {
 func TestHandleFormSubmission_S3UploadFailure(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values
 	formValues := map[string]string{
 		"job_id":    "5678",
@@ -419,7 +413,7 @@ func TestHandleFormSubmission_S3UploadFailure(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockFailedUploadResumeToS3))
@@ -427,12 +421,12 @@ func TestHandleFormSubmission_S3UploadFailure(t *testing.T) {
 
 	// Assert response - should fail with S3 upload error
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Failed to upload resume", response["error"])
@@ -441,7 +435,7 @@ func TestHandleFormSubmission_S3UploadFailure(t *testing.T) {
 func TestHandleFormSubmission_MissingRequiredFields(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with missing required fields
 	formValues := map[string]string{
 		// Missing job_id
@@ -460,7 +454,7 @@ func TestHandleFormSubmission_MissingRequiredFields(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -468,12 +462,12 @@ func TestHandleFormSubmission_MissingRequiredFields(t *testing.T) {
 
 	// Assert response - should fail with binding error
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Invalid submission data", response["error"])
@@ -482,7 +476,7 @@ func TestHandleFormSubmission_MissingRequiredFields(t *testing.T) {
 func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with invalid user_id format (not a number)
 	formValues := map[string]string{
 		"job_id":    "5678",
@@ -501,7 +495,7 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -509,12 +503,12 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 
 	// Assert response - should fail with invalid user ID format
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message about invalid format
 	assert.Contains(t, response, "error")
 	errorMsg, ok := response["error"].(string)
@@ -526,10 +520,10 @@ func TestHandleFormSubmission_InvalidUserID(t *testing.T) {
 func TestHandleFormSubmission_MissingUserID(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values without user_id
 	formValues := map[string]string{
-		"job_id":    "5678",
+		"job_id": "5678",
 		// No user_id provided
 		"username":  "No User ID",
 		"email":     "no_userid@example.com",
@@ -542,13 +536,13 @@ func TestHandleFormSubmission_MissingUserID(t *testing.T) {
 
 	// Set URL parameter
 	req.URL.Path = "/api/forms/" + formUUID + "/submit"
-	
+
 	// Add test header to avoid actual S3 uploads
 	req.Header.Set("X-Test-Mode", "true")
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with route
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -556,12 +550,12 @@ func TestHandleFormSubmission_MissingUserID(t *testing.T) {
 
 	// Assert response - should succeed
 	assert.Equal(t, http.StatusOK, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Verify success message and that an ID was generated
 	assert.Contains(t, response, "message")
 	assert.Equal(t, "Application submitted successfully", response["message"])
@@ -575,7 +569,7 @@ func TestHandleFormSubmission_MissingUserID(t *testing.T) {
 func TestGetFormSubmissions_DifferentSortOptions(t *testing.T) {
 	// Set up test cases for different sort options
 	sortOptions := []string{"created_at", "ats_score"}
-	
+
 	for _, sortOption := range sortOptions {
 		// Create a test request with the sort option
 		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/forms/4d9a4320-f1d1-43f2-8477-edd07f557442/submissions?sort_by=%s&limit=2", sortOption), nil)
@@ -584,7 +578,7 @@ func TestGetFormSubmissions_DifferentSortOptions(t *testing.T) {
 
 		// Assertions
 		assert.Equal(t, http.StatusOK, recorder.Code)
-		
+
 		// Parse response
 		var response map[string][]models.JobSubmission
 		err := json.Unmarshal(recorder.Body.Bytes(), &response)
@@ -597,7 +591,7 @@ func TestGetFormSubmissions_DifferentSortOptions(t *testing.T) {
 func TestGetFormSubmissions_DifferentLimits(t *testing.T) {
 	// Test with various limit values
 	limits := []string{"1", "5", "invalid"}
-	
+
 	for _, limit := range limits {
 		// Create a test request with the limit option
 		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/forms/4d9a4320-f1d1-43f2-8477-edd07f557442/submissions?limit=%s", limit), nil)
@@ -606,7 +600,7 @@ func TestGetFormSubmissions_DifferentLimits(t *testing.T) {
 
 		// Assertions - should succeed even with invalid limit (will use default)
 		assert.Equal(t, http.StatusOK, recorder.Code)
-		
+
 		// Parse response
 		var response map[string][]models.JobSubmission
 		err := json.Unmarshal(recorder.Body.Bytes(), &response)
@@ -619,11 +613,11 @@ func TestGetFormSubmissions_DifferentLimits(t *testing.T) {
 func TestHandleFormSubmission_JobNotFound(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with non-existent job ID
 	formValues := map[string]string{
 		"job_id":    "9999", // Non-existent job ID
-		"user_id":   "1008", 
+		"user_id":   "1008",
 		"username":  "Job Not Found User",
 		"email":     "jobnotfound@example.com",
 		"form_data": `{"experience":"2 years", "location":"Remote", "skills":["Go", "AWS"]}`,
@@ -638,7 +632,7 @@ func TestHandleFormSubmission_JobNotFound(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with custom handler
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -646,12 +640,12 @@ func TestHandleFormSubmission_JobNotFound(t *testing.T) {
 
 	// Check if we get an appropriate response for job not found
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// The exact error might vary but should be database-related
 	assert.Contains(t, response, "error")
 }
@@ -660,11 +654,11 @@ func TestHandleFormSubmission_JobNotFound(t *testing.T) {
 func TestHandleFormSubmission_InvalidEmail(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with invalid email
 	formValues := map[string]string{
 		"job_id":    "5678",
-		"user_id":   "1009", 
+		"user_id":   "1009",
 		"username":  "Invalid Email User",
 		"email":     "invalid-email", // Invalid email format
 		"form_data": `{"experience":"2 years", "location":"Remote", "skills":["Go", "AWS"]}`,
@@ -679,7 +673,7 @@ func TestHandleFormSubmission_InvalidEmail(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with custom handler
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -687,12 +681,12 @@ func TestHandleFormSubmission_InvalidEmail(t *testing.T) {
 
 	// Should fail validation
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Should be a validation error
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Invalid submission data", response["error"])
@@ -702,11 +696,11 @@ func TestHandleFormSubmission_InvalidEmail(t *testing.T) {
 func TestHandleFormSubmission_EmptySkills(t *testing.T) {
 	// Set up a valid form UUID
 	formUUID := "4d9a4320-f1d1-43f2-8477-edd07f557442"
-	
+
 	// Create form values with empty skills array
 	formValues := map[string]string{
 		"job_id":    "5678",
-		"user_id":   "1010", 
+		"user_id":   "1010",
 		"username":  "Empty Skills User",
 		"email":     "emptyskills@example.com",
 		"form_data": `{"experience":"2 years", "location":"Remote", "skills":[]}`, // Empty skills array
@@ -721,7 +715,7 @@ func TestHandleFormSubmission_EmptySkills(t *testing.T) {
 
 	// Create recorder and serve request
 	recorder := httptest.NewRecorder()
-	
+
 	// Create router with custom handler
 	testRouter := gin.Default()
 	testRouter.POST("/api/forms/:form_uuid/submit", CreateHandleFormSubmissionWithCustomUploader(mockUploadResumeToS3))
@@ -729,12 +723,12 @@ func TestHandleFormSubmission_EmptySkills(t *testing.T) {
 
 	// Since the skills column has a NOT NULL constraint, we expect an error
 	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err = json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Should be a database error related to NOT NULL constraint
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Failed to store form submission", response["error"])
@@ -750,12 +744,12 @@ func TestGetFormSubmissions_FormDoesNotExist(t *testing.T) {
 
 	// Should return 400 Bad Request because form doesn't exist
 	assert.Equal(t, http.StatusBadRequest, recorder.Code)
-	
+
 	// Parse response body
 	var response map[string]interface{}
 	err := json.Unmarshal(recorder.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	
+
 	// Check for error message
 	assert.Contains(t, response, "error")
 	assert.Equal(t, "Invalid form_uuid, form does not exist", response["error"])
@@ -773,7 +767,7 @@ func TestGetFormSubmissions_DateFilter(t *testing.T) {
 
 	// Test cases for different date filters
 	dateFilters := []string{"all", "today", "2025-03-03", "invalid-date"}
-	
+
 	for _, dateFilter := range dateFilters {
 		// Create a test request with the date filter
 		req, _ := http.NewRequest("GET", fmt.Sprintf("/api/forms/4d9a4320-f1d1-43f2-8477-edd07f557442/submissions?date=%s", dateFilter), nil)
@@ -782,13 +776,13 @@ func TestGetFormSubmissions_DateFilter(t *testing.T) {
 
 		// Assertions
 		assert.Equal(t, http.StatusOK, recorder.Code)
-		
+
 		// Parse response
 		var response map[string][]models.JobSubmission
 		err := json.Unmarshal(recorder.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Contains(t, response, "submissions")
-		
+
 		// For "all" and valid date, we should get submissions
 		if dateFilter == "all" || dateFilter == "today" || dateFilter == "2025-03-03" {
 			assert.GreaterOrEqual(t, len(response["submissions"]), 1, "Expected at least one submission for date filter: %s", dateFilter)

@@ -64,7 +64,11 @@ CREATE TABLE IF NOT EXISTS job_submissions (
     form_data JSONB NOT NULL, -- Stores user responses dynamically
     resume_url TEXT NOT NULL, -- Store S3 URL instead of local path
     ats_score INTEGER NOT NULL DEFAULT 0, -- ATS ranking score (0-100)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    skills VARCHAR[],
+    status VARCHAR(50) NOT NULL DEFAULT 'applied', -- applied/shortlisted/rejected/finalized
+    UNIQUE (job_id, email)
 );
 
 CREATE TABLE IF NOT EXISTS availabilities (
@@ -79,16 +83,17 @@ CREATE TABLE IF NOT EXISTS availabilities (
 
 CREATE TABLE IF NOT EXISTS interviews (
     id SERIAL PRIMARY KEY,
-    job_id INT NOT NULL,
+    job_id VARCHAR(255) NOT NULL REFERENCES jobs(job_id),
     hr_user_id INT REFERENCES users(id) ON DELETE SET NULL,
     job_submission_id INT NOT NULL REFERENCES job_submissions(id),
     interviewer_user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    availability_id INT NOT NULL REFERENCES availabilities(id) ON DELETE CASCADE,
+    availability_id INT NOT NULL UNIQUE REFERENCES availabilities(id) ON DELETE CASCADE,
     feedback TEXT DEFAULT NULL,
-    "status" VARCHAR(50) DEFAULT 'scheduled', --or completed 
-    UNIQUE (availability_id) -- Ensures an availability slot can only be booked once(this is ensured from application also)
+    verdict VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, passed, failed
+    "status" VARCHAR(50) NOT NULL DEFAULT 'scheduled', --pending_feedback, completed 
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
-
 
 -- Add indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
@@ -102,6 +107,3 @@ CREATE INDEX IF NOT EXISTS idx_interview_availabilities ON interviews (availabil
 
 CREATE INDEX  IF NOT EXISTS idx_job_submissions_job ON job_submissions(form_uuid);
 CREATE INDEX  IF NOT EXISTS idx_job_submissions_ats ON job_submissions(ats_score DESC);
-
--- Create a unique constraint to prevent duplicate job submissions
-ALTER TABLE job_submissions ADD CONSTRAINT unique_job_submission UNIQUE (job_id, email);

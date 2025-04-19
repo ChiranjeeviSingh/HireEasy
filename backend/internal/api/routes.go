@@ -20,9 +20,9 @@ func SetupRoutes(router *gin.Engine) {
 		public.POST("/login", handlers.LoginH)
 		public.POST("/register", handlers.RegisterH)
 
-		// Form submission routes (unauthenticated)
+		// candidate job_submission routes
 		public.POST("/jobs/:job_id/apply", handlers.HandleFormSubmission)    // Submit job application
-		public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
+        public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
 	}
 
 	// Protected routes (auth required)
@@ -38,6 +38,10 @@ func SetupRoutes(router *gin.Engine) {
 			jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
 			jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
 			jobs.DELETE("/:job_id", handlers.DeleteJobH)               // Delete job
+
+            //TODO: job_submission route
+            //jobs.PUT("/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)   // Update candidate's candidature status
+        
 		}
 
 		// Form template routes
@@ -77,6 +81,16 @@ func SetupRoutes(router *gin.Engine) {
             availability.GET("/user/:user_name", handlers.GetUserAvailabilityH)  // Get specific user's availability(using user's username)
             availability.GET("", handlers.GetAllAvailabilityH)         // Get all available people with with optional date range, profile filters
         }
+
+        //Interview routes
+        interviews := api.Group("/interviews")
+        {
+            interviews.POST("", handlers.CreateInterviewH)                       // Reserve availability slot(HR action)
+            interviews.DELETE("/:id", handlers.DeleteInterviewH)                 // Cancel interview booking(HR action) 
+            interviews.GET("", handlers.ListAllInterviewsH)                      // List all interviews with optional filters(query params) and response based on the role logged in(HR/Interviewer)
+            interviews.POST("/:id/feedback", handlers.SubmitFeedbackH)           // Submit feedback for interview(Interviewer action)
+        }
+
    }
 
 }
