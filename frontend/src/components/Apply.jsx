@@ -123,6 +123,7 @@ export function Apply() {
 
     // 1) job_id
     submissionFormData.append("job_id", jobID);
+    submissionFormData.append("form_uuid", formUUID);
 
     // 2) username
     submissionFormData.append("username", candidateName);

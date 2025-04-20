@@ -1,14 +1,15 @@
 package services
 
 import (
-    "context"
-    "errors"
-    "time"
-    "github.com/golang-jwt/jwt/v4"
-    "golang.org/x/crypto/bcrypt"
-    "backend/internal/database"
-    "backend/internal/config"
-    "backend/internal/models"
+	"backend/internal/config"
+	"backend/internal/database"
+	"backend/internal/models"
+	"context"
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -20,6 +21,8 @@ type RegisterRequest struct {
     Username string `json:"username" binding:"required"`
     Email    string `json:"email" binding:"required,email"`
     Password string `json:"password" binding:"required,min=6"`
+    Role string     `json:"role" binding:"required"`
+    CompanyName string `json:"company_name" binding:"required"` 
 }
 
 type LoginRequest struct {
@@ -55,9 +58,9 @@ func Register(ctx context.Context, req *RegisterRequest) (*AuthResponse, error) 
     // Create user
     var userId int
     err = db.GetContext(ctx, &userId,
-        `INSERT INTO users (email, password_hash, username) 
-         VALUES ($1, $2, $3) 
-         RETURNING id`, req.Email, string(hashedPassword), req.Username)
+        `INSERT INTO users (email, password_hash, username, role, company_name) 
+         VALUES ($1, $2, $3, $4, $5) 
+         RETURNING id`, req.Email, string(hashedPassword), req.Username, req.Role, req.CompanyName)
     if err != nil {
         return nil, err
     }
@@ -84,7 +87,7 @@ func Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error) {
     db := database.GetDB()
 
     err := db.GetContext(ctx, &user,
-        `SELECT id, email, password_hash, username 
+        `SELECT id, email, password_hash, username, role 
          FROM users 
          WHERE email = $1`, req.Email)
     if err != nil {
@@ -108,6 +111,7 @@ func Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error) {
         User: models.User {
             Username: user.Username,
             Email: req.Email,
+            Role: user.Role,
         },
     }, nil
 }

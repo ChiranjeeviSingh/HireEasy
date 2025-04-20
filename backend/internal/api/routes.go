@@ -20,9 +20,9 @@ func SetupRoutes(router *gin.Engine) {
 		public.POST("/login", handlers.LoginH)
 		public.POST("/register", handlers.RegisterH)
 
-		// Form submission routes (unauthenticated)
+		// candidate job_submission routes
 		public.POST("/jobs/:job_id/apply", handlers.HandleFormSubmission)    // Submit job application
-		public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
+        public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
 	}
 
 	// Protected routes (auth required)
@@ -38,6 +38,10 @@ func SetupRoutes(router *gin.Engine) {
 			jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
 			jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
 			jobs.DELETE("/:job_id", handlers.DeleteJobH)               // Delete job
+
+            //TODO: job_submission route
+            //jobs.PUT("/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)   // Update candidate's candidature status
+        
 		}
 
 		// Form template routes
@@ -49,13 +53,44 @@ func SetupRoutes(router *gin.Engine) {
 			formTemplates.DELETE("/:form_template_id", handlers.DeleteFormTemplateH) // Delete template
 		}
 
-		// Application form routes
-		applicationForms := api.Group("")
-		{
-			applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template
-			applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status
-			applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get form details
-			applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form
-		}
-	}
+        // Application form routes
+        applicationForms := api.Group("")
+        {
+            applicationForms.POST("/jobs/:job_id/forms", handlers.LinkJobToFormTemplateH)   // Link job to form template, return unique URL and form_uuid
+            applicationForms.PATCH("/forms/:form_uuid/status", handlers.UpdateFormStatusH)  // Update form status (active/inactive)
+            applicationForms.GET("/forms/:form_uuid", handlers.GetFormDetailsH)             // Get job and form template details (unauthenticated)
+            applicationForms.DELETE("/forms/:form_uuid", handlers.DeleteFormH)              // Delete form and unlink from job
+        }
+
+
+        // Profile(Interviwer) routes
+        profiles := api.Group("/profiles")
+        {
+            profiles.POST("", handlers.CreateProfileH)          // Create new profile
+            profiles.PUT("", handlers.UpdateMyProfileH)         // Update own profile
+            profiles.GET("/me", handlers.GetMyProfileH)         // Get own profile
+            profiles.GET("/user/:user_name", handlers.GetUserProfileH) // Get other users profile
+        }
+
+        // Availability routes
+        availability := api.Group("/availability")
+        {
+            availability.POST("", handlers.CreateAvailabilityH)         // Create availability slot(Interviewer action)
+            availability.DELETE("/:id", handlers.DeleteAvailabilityH)   // Delete availability slot(Interviewer action)
+            availability.GET("/me", handlers.GetMyAvailabilityH)       // Get own availability using JWT token with optional date range
+            availability.GET("/user/:user_name", handlers.GetUserAvailabilityH)  // Get specific user's availability(using user's username)
+            availability.GET("", handlers.GetAllAvailabilityH)         // Get all available people with with optional date range, profile filters
+        }
+
+        //Interview routes
+        interviews := api.Group("/interviews")
+        {
+            interviews.POST("", handlers.CreateInterviewH)                       // Reserve availability slot(HR action)
+            interviews.DELETE("/:id", handlers.DeleteInterviewH)                 // Cancel interview booking(HR action) 
+            interviews.GET("", handlers.ListAllInterviewsH)                      // List all interviews with optional filters(query params) and response based on the role logged in(HR/Interviewer)
+            interviews.POST("/:id/feedback", handlers.SubmitFeedbackH)           // Submit feedback for interview(Interviewer action)
+        }
+
+   }
+
 }

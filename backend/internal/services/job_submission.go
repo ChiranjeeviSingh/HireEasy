@@ -10,6 +10,7 @@ import (
 	"backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding" // ✅ Added for explicit form binding
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -29,16 +30,22 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 	}
 
 	var submission models.FormSubmissionRequest
-	
-	// Parse multipart form
-	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-		log.Printf("Failed to parse multipart form: %v", err)
-		return nil, fmt.Errorf("failed to parse form: %v", err)
-	}
 
-	// Bind form data
-	if err := c.ShouldBind(&submission); err != nil {
-		log.Printf("Failed to bind form data: %v", err)
+	// ❌ Commenting out original form parsing
+	// if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+	// 	log.Printf("Failed to parse multipart form: %v", err)
+	// 	return nil, fmt.Errorf("failed to parse form: %v", err)
+	// }
+
+	// ❌ Commenting out original binding
+	// if err := c.ShouldBind(&submission); err != nil {
+	// 	log.Printf("Failed to bind form data: %v", err)
+	// 	return nil, fmt.Errorf("invalid form data: %v", err)
+	// }
+
+	// ✅ Replaced with correct multipart binding
+	if err := c.ShouldBindWith(&submission, binding.FormMultipart); err != nil {
+		log.Printf("Failed to bind form data (multipart): %v", err)
 		return nil, fmt.Errorf("invalid form data: %v", err)
 	}
 
@@ -95,10 +102,11 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 		Username:  submission.Username,
 		Email:     submission.Email,
 		FormData:  []byte(submission.FormData),
+		FormUUID:  submission.FormUUID,
 		Skills:    pq.StringArray(skills),
 		ResumeURL: resumeURL,
 		ATSScore:  int(atsScore),
-		Status:    "pending",
+		Status:    "applied",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -125,7 +133,7 @@ func (s *FormSubmissionService) insertJobSubmission(submission *models.JobSubmis
 		// Continue anyway, we'll try the insert
 	} else {
 		defer tableInfo.Close()
-		
+
 		var columns []string
 		for tableInfo.Next() {
 			var name, dataType, nullable string
@@ -136,78 +144,24 @@ func (s *FormSubmissionService) insertJobSubmission(submission *models.JobSubmis
 		log.Printf("Table structure: %v", columns)
 	}
 
-	// Check if the form_uuid column exists
-	var hasFormUUID bool
-	err = s.db.Get(&hasFormUUID, `
-		SELECT EXISTS (
-			SELECT 1 
-			FROM information_schema.columns 
-			WHERE table_name = 'job_submissions' AND column_name = 'form_uuid'
-		)
-	`)
-	if err != nil {
-		log.Printf("Error checking for form_uuid column: %v", err)
-		// Continue anyway, we'll try the insert
-	}
+	insertQuery := `
+		INSERT INTO job_submissions (
+			form_uuid, job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		RETURNING id`
 
-	var insertQuery string
-	var args []interface{}
-
-	if hasFormUUID {
-		// Try to get any form_uuid for this job
-		var formUUID string
-		err = s.db.QueryRow(`
-			SELECT id FROM form_templates 
-			WHERE job_id = $1 
-			LIMIT 1
-		`, submission.JobID).Scan(&formUUID)
-		
-		if err != nil {
-			// If no form template exists, use a default UUID for test submissions
-			formUUID = "00000000-0000-0000-0000-000000000000"
-			log.Printf("Using default UUID as no form template found: %s", formUUID)
-		}
-		
-		// Query with form_uuid
-		insertQuery = `
-			INSERT INTO job_submissions (
-				form_uuid, job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-			RETURNING id`
-		
-		args = []interface{}{
-			formUUID,
-			submission.JobID,
-			submission.Username,
-			submission.Email,
-			submission.FormData,
-			submission.Skills,
-			submission.ResumeURL,
-			submission.ATSScore,
-			submission.Status,
-			submission.CreatedAt,
-			submission.UpdatedAt,
-		}
-	} else {
-		// Query without form_uuid
-		insertQuery = `
-			INSERT INTO job_submissions (
-				job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
-			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-			RETURNING id`
-		
-		args = []interface{}{
-			submission.JobID,
-			submission.Username,
-			submission.Email,
-			submission.FormData,
-			submission.Skills,
-			submission.ResumeURL,
-			submission.ATSScore,
-			submission.Status,
-			submission.CreatedAt,
-			submission.UpdatedAt,
-		}
+	args := []interface{}{
+		submission.FormUUID,
+		submission.JobID,
+		submission.Username,
+		submission.Email,
+		submission.FormData,
+		submission.Skills,
+		submission.ResumeURL,
+		submission.ATSScore,
+		submission.Status,
+		submission.CreatedAt,
+		submission.UpdatedAt,
 	}
 
 	log.Printf("Using query: %s", insertQuery)
@@ -224,7 +178,7 @@ func calculateATSScore(skills []string) int {
 	// Simple scoring logic based on number of skills
 	baseScore := 70
 	skillPoints := len(skills) * 5
-	
+
 	score := baseScore + skillPoints
 	if score > 100 {
 		score = 100
@@ -240,13 +194,13 @@ func (s *FormSubmissionService) checkJobSubmissionsTable() error {
 		WHERE table_name = 'job_submissions'
 		ORDER BY ordinal_position;
 	`
-	
+
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return fmt.Errorf("failed to query table schema: %v", err)
 	}
 	defer rows.Close()
-	
+
 	var columns []string
 	for rows.Next() {
 		var col string
@@ -255,7 +209,7 @@ func (s *FormSubmissionService) checkJobSubmissionsTable() error {
 		}
 		columns = append(columns, col)
 	}
-	
+
 	log.Printf("Job submissions table columns: %v", columns)
 	return nil
 }

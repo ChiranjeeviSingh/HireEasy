@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../styles/styles.css";
 
 export function Login() {
   const navigate = useNavigate();
@@ -28,17 +29,31 @@ export function Login() {
       });
 
       const data = await response.json();
-      console.log("Response Data:", data); 
+      console.log("Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.msg || "Invalid credentials, please try again.");
       }
 
-      // Store the token properly
-      localStorage.setItem("token", data.token.token);
+      const token = data.token.token;
+      const user = data.token.user;
+
+      // Save token and role
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("username", user.username);
 
       alert("Login Successful!");
-      navigate("/dashboard");
+
+      // Redirect based on role
+      if (user.role === "HR") {
+        navigate("/dashboard");
+      } else if (user.role === "Interviewer") {
+        navigate("/interviewer-dashboard");
+      } else {
+        setError("Unknown user role. Please contact support.");
+      }
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -47,36 +62,38 @@ export function Login() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gray-100">
-      {/* Background Image */}
+    <div
+      className="container main-wrapper"
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+      }}
+    >
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="login-page"
         style={{
-          backgroundImage:
-            "url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?fm=jpg&q=60&w=3000&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8am9iJTIwcG9ydGFsfGVufDB8fDB8fHww')",
-          filter: "brightness(0.4)",
+          width: "40%",
+          maxWidth: "900px",
+          padding: "50px",
+          borderRadius: "10px",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+          backgroundColor: "#fff",
+          textAlign: "center",
         }}
-      ></div>
-
-      {/* Login Card */}
-      <div className="relative bg-white bg-opacity-95 shadow-lg rounded-2xl p-10 w-full max-w-md text-center">
-        {/* Logo & Welcome Text */}
-        <h1 className="text-4xl font-bold text-gray-800 tracking-wide font-sans mb-3">
-          HireEasy
-        </h1>
-        <p className="text-gray-600">
-          Sign in and start hiring the best talent out there.
-        </p>
-
-        {/* Login Form */}
-        <form onSubmit={handleLogin} className="mt-6">
-          {error && <p className="text-red-500 mb-3">{error}</p>}
-
-          {/* Email Input */}
-          <div className="mb-4">
+      >
+        <h1 className="logo">HireEasy</h1>
+        <div className="my-3">
+          <h2>Welcome to Careerbuilder</h2>
+          <p>Sign in and start hiring the best talent out there.</p>
+        </div>
+        <form onSubmit={handleLogin}>
+          {error && <p className="error-text">{error}</p>}
+          <div className="form-group">
             <input
               id="email"
-              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+              className="form-control"
               type="email"
               placeholder="Enter your email"
               value={email}
@@ -84,12 +101,10 @@ export function Login() {
               required
             />
           </div>
-
-          {/* Password Input */}
-          <div className="mb-4">
+          <div className="form-group">
             <input
               id="password"
-              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+              className="form-control"
               type="password"
               placeholder="Enter your password"
               value={password}
@@ -97,25 +112,18 @@ export function Login() {
               required
             />
           </div>
-
-          {/* Sign-In Button */}
           <button
             type="submit"
-            className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition"
+            className="auth-button btn-block my-2"
+            style={{ width: "100%" }}
             disabled={loading}
           >
             {loading ? "Logging in..." : "Sign In"}
           </button>
         </form>
-
-        {/* Register Link */}
-        <div className="mt-4 text-gray-600">
+        <div className="text-center">
           Don't have an account?{" "}
-          <a
-            href="#"
-            onClick={() => navigate("/register")}
-            className="text-blue-500 hover:underline"
-          >
+          <a href="#" onClick={() => navigate("/register")}>
             Create One Now
           </a>
         </div>

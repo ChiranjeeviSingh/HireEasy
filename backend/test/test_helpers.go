@@ -14,6 +14,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
+	"time"
+	"math/rand"
 )
 
 // SetupTestDB initializes a test database
@@ -25,9 +27,6 @@ func SetupTestDB() *sql.DB {
 
 	cfg := config.GetConfig().DBConfig
 
-	// Use a separate test database
-	testDbName := cfg.Dbname + "_test"
-
 	// First connect to default database to create test database if it doesn't exist
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.Dbname)
@@ -38,6 +37,9 @@ func SetupTestDB() *sql.DB {
 	}
 	defer db.Close()
 
+	// Use a separate test database
+	testDbName := "app_db_test"
+	
 	// Create test database if it doesn't exist
 	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", testDbName))
 	if err != nil && !isDatabaseExistsError(err) {
@@ -133,13 +135,34 @@ func InsertTestUser(db *sql.DB) (userID int, token string) {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	query := `INSERT INTO users (email, password_hash, username) VALUES ('test@example.com', $1, 'testuser') RETURNING id`
+	query := `INSERT INTO users (email, password_hash, username, role, company_name) VALUES ('test@example.com', $1, 'testuser', 'HR', 'Test Company') RETURNING id`
 	err = db.QueryRow(query, string(hashedPassword)).Scan(&userID)
 	if err != nil {
 		log.Fatalf("Failed to insert test user: %v", err)
 	}
 
-	token = "dummy-jwt-token" // Simulate a valid token
+	token = "dummy-hr-jwt-token" // Simulate a valid token
+	return
+}
+
+// InsertTestInterviewerUser inserts a dummy interviewer user for authentication tests
+func InsertTestInterviewerUser(db *sql.DB) (userID int, token string) {
+	// Hash the password 'password123'
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("Failed to hash password: %v", err)
+	}
+
+	rand.Seed(time.Now().UnixNano())
+    r := rand.Intn(100000) 
+
+	query := fmt.Sprintf(`INSERT INTO users (email, password_hash, username, role, company_name) VALUES ('interviewer%d@example.com', $1, 'interviewer_%d', 'INTERVIEWER', 'Test Company') RETURNING id`,  r, r)
+	err = db.QueryRow(query, string(hashedPassword)).Scan(&userID)
+	if err != nil {
+		log.Fatalf("Failed to insert test interviewer: %v", err)
+	}
+
+	token = "dummy-interviewer-jwt-token" // Simulate a valid token
 	return
 }
 
@@ -159,8 +182,9 @@ func InsertTestData(db *sql.DB) string {
 
 // CleanupTestDB removes all test data after a test
 func CleanupTestDB(db *sql.DB) {
-	_, err := db.Exec("DELETE FROM application_form; DELETE FROM jobs; DELETE FROM form_templates; DELETE FROM users;")
+	_, err := db.Exec("DELETE FROM application_form; DELETE FROM jobs; DELETE FROM form_templates; DELETE FROM users; TRUNCATE users, jobs, job_submissions, availabilities, interviews CASCADE;")
 	if err != nil {
 		log.Fatalf("Failed to clean up test DB: %v", err)
 	}
 }
+
