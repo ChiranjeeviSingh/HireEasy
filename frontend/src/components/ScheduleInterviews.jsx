@@ -47,18 +47,29 @@ function ScheduleInterviews() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/jobs/${jobId}/submissions`, {
+      const resUnderReview = await fetch(`${API_BASE}/jobs/${jobId}/submissions?status=under_review`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (res.status === 401) throw new Error("Unauthorized request while fetching candidates.");
+      if (resUnderReview.status === 401) throw new Error("Unauthorized request while fetching under review candidates.");
 
-      const data = await res.json();
-      if (data && data.data) {
-        setCandidates(data.data);
-      } else {
-        setCandidates([]);
-      }
+      const underReviewData = await resUnderReview.json();
+
+      const resShortlisted = await fetch(`${API_BASE}/jobs/${jobId}/submissions?status=shortlisted`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (resShortlisted.status === 401) throw new Error("Unauthorized request while fetching shortlisted candidates.");
+
+      const shortlistedData = await resShortlisted.json();
+
+      // Combine under_review and shortlisted candidates
+      const combinedCandidates = [
+        ...(underReviewData?.data || []),
+        ...(shortlistedData?.data || [])
+      ];
+
+      setCandidates(combinedCandidates);
     } catch (err) {
       setError(err.message || "Failed to load candidates.");
     }
@@ -87,6 +98,50 @@ function ScheduleInterviews() {
     } catch (err) {
       setError(err.message || "Failed to fetch availability.");
       setAvailability([]);
+    }
+  };
+
+  const updateCandidateStatus = async (candidateId, newStatus) => {
+    if (!token) {
+      alert("Unauthorized. Please login again.");
+      return;
+    }
+
+    const url = `${API_BASE}/jobs/submissions/${candidateId}/status`;
+    const body = JSON.stringify({ status: newStatus });
+    
+    console.log("Updating status for candidate:", candidateId);
+    console.log("Request URL:", url);
+    console.log("Request body:", body);
+
+    try {
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: body,
+      });
+
+      const responseBody = await res.json();
+      if (!res.ok) {
+        console.error("Error Response Body:", responseBody);
+        throw new Error(`Failed to update candidate status: ${responseBody.message || "Unknown error"}`);
+      }
+
+      alert(`Candidate status updated to '${newStatus}'!`);
+      
+      // Update candidate status in our local state too
+      setCandidates(prev => 
+        prev.map(c => 
+          c.id === candidateId 
+            ? {...c, status: newStatus} 
+            : c
+        )
+      );
+    } catch (err) {
+      alert(err.message);
     }
   };
 
@@ -120,6 +175,11 @@ function ScheduleInterviews() {
 
       alert("Interview scheduled successfully!");
       setShowPopupFor(null);
+
+      // After scheduling, update the candidate's status to "shortlisted"
+      await updateCandidateStatus(candidate.id, "shortlisted");
+
+      // Update our interviews state
       setInterviews((prev) => ({
         ...prev,
         [candidate.id]: {
@@ -133,24 +193,58 @@ function ScheduleInterviews() {
   };
 
   const handleDeleteInterview = async (candidateId) => {
-    const interview = interviews[candidateId];
-    if (!interview || !interview.interview_id) return;
+    const candidate = candidates.find(c => c.id === candidateId);  // Find the selected candidate
+    if (!candidate) {
+      alert("Candidate not found.");
+      return;
+    }
 
+    if (!candidate.status || candidate.status !== "shortlisted") {
+      alert("Interview can only be canceled for shortlisted candidates.");
+      return;
+    }
+
+    // Fetch all interviews
     try {
-      const res = await fetch(`${API_BASE}/interviews/${interview.interview_id}`, {
+      const resInterviews = await fetch(`${API_BASE}/interviews`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!resInterviews.ok) throw new Error("Failed to fetch interviews.");
+
+      const interviewsData = await resInterviews.json();
+
+      // Find the interview that matches the candidate's job_submission_id
+      const interviewToDelete = interviewsData.find((interview) => interview.job_submission_id === candidate.id);
+
+      if (!interviewToDelete) {
+        alert("Interview not found for this candidate.");
+        return;
+      }
+
+      // Proceed to delete the interview using the interview ID
+      const deleteRes = await fetch(`${API_BASE}/interviews/${interviewToDelete.id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!res.ok) throw new Error("Failed to delete interview");
-      alert("Interview deleted successfully");
+      if (!deleteRes.ok) throw new Error("Failed to delete interview.");
+      
+      // After deleting, update candidate status to 'under_review'
+      await updateCandidateStatus(candidate.id, "under_review");
+
+      // Remove the interview from the state
       setInterviews((prev) => {
         const updated = { ...prev };
         delete updated[candidateId];
         return updated;
       });
+
+      alert("Interview deleted successfully!");
     } catch (err) {
       alert(err.message);
     }
@@ -214,9 +308,9 @@ function ScheduleInterviews() {
                   <p className="text-gray-600 mb-1">🛠️ <strong>Skills:</strong> {c.skills.join(", ")}</p>
                 )}
 
-                {interviews[c.id] ? (
+                {c.status === "shortlisted" ? (
                   <div className="mt-4 text-green-700">
-                    ✅ <strong>Interview Scheduled:</strong> {interviews[c.id].slot.username} – {new Date(interviews[c.id].slot.date).toLocaleDateString()} | {interviews[c.id].slot.from_time} - {interviews[c.id].slot.to_time}
+                    ✅ <strong>Interview Scheduled</strong>
                     <button
                       onClick={() => handleDeleteInterview(c.id)}
                       className="ml-4 px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
@@ -236,7 +330,7 @@ function ScheduleInterviews() {
                   </button>
                 )}
 
-                {showPopupFor === c.id && !interviews[c.id] && (
+                {showPopupFor === c.id && c.status !== "shortlisted" && (
                   <div className="mt-4 bg-gray-50 border border-gray-300 p-4 rounded-lg">
                     <h4 className="font-semibold mb-3 text-gray-800">Select a Time Slot:</h4>
                     {availability.length === 0 ? (

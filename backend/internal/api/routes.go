@@ -22,7 +22,6 @@ func SetupRoutes(router *gin.Engine) {
 
 		// candidate job_submission routes
 		public.POST("/jobs/:job_id/apply", handlers.HandleFormSubmission)    // Submit job application
-        public.GET("/jobs/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions
 	}
 
 	// Protected routes (auth required)
@@ -38,6 +37,8 @@ func SetupRoutes(router *gin.Engine) {
 			jobs.GET("/status/:status", handlers.GetJobsByStatusH)    // Get jobs by status
 			jobs.GET("", handlers.ListUserJobsH)                      // List all jobs for user
 			jobs.DELETE("/:job_id", handlers.DeleteJobH)               // Delete job
+			jobs.GET("/:job_id/submissions", handlers.GetFormSubmissions) // Get job submissions with optional status filter
+			jobs.PUT("/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH) // Update candidate's submission status
 
             //TODO: job_submission route
             //jobs.PUT("/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)   // Update candidate's candidature status

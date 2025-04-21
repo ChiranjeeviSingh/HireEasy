@@ -6,21 +6,20 @@ function JobApplications() {
 
   const [jobs, setJobs] = useState([]);
   const [selectedJobId, setSelectedJobId] = useState("");
-
   const [submissions, setSubmissions] = useState([]);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
-
   const [minExperience, setMinExperience] = useState(0);
   const [selectedSkill, setSelectedSkill] = useState("");
   const [sortBy, setSortBy] = useState("atsScore");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [statusUpdate, setStatusUpdate] = useState({});
 
-  // Adjust to your actual API location or environment variable
+  const [selectedStatus, setSelectedStatus] = useState("all"); // New state for filtering by status
+
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
-  // 1) Fetch all jobs for the dropdown (requires Auth if your route is protected)
+  // Fetch all jobs
   const fetchJobs = async () => {
     try {
       setLoading(true);
@@ -44,39 +43,46 @@ function JobApplications() {
     }
   };
 
-  // 2) Fetch submissions for the selected job
-  const fetchSubmissions = async (jobId) => {
+  // Fetch submissions for the selected job based on status filter
+  const fetchSubmissions = async (jobId, status = "") => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE}/jobs/${jobId}/submissions`);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        setError("Unauthorized. Please login again.");
+        return;
+      }
+
+      let url = `${API_BASE}/jobs/${jobId}/submissions`;
+      if (status && status !== "all") {
+        url += `?status=${status}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
         throw new Error("Failed to fetch job submissions.");
       }
       const data = await response.json();
 
       if (data && data.data) {
-        // Transform data to the structure we want for filtering, sorting, etc.
-        // We'll parse item.form_data for experience, skills, etc.
         const transformed = data.data.map((item) => {
-          // If form_data is returned as an object, we can use it directly:
           const formResponses = item.form_data || {};
-
-          // For example, if your form_data might contain { Q_Experience: "3 years", Q_Skills: ["React","Node"] }, etc.
           return {
             email: item.email,
             name: item.username,
             atsScore: item.ats_score,
             submissionDate: item.created_at,
             resumeUrl: item.resume_url,
-            // We'll store the entire set of Q_ fields under `responses`
-            responses: {
-              ...formResponses,
-              // Also insert `skills` if you store them separately in the DB
-              Q_Skills: item.skills || [],
-            },
+            id: item.id,
+            responses: { ...formResponses, Q_Skills: item.skills || [] },
+            status: item.status || "applied", // Default status as 'applied'
           };
         });
-
         setSubmissions(transformed);
       } else {
         setSubmissions([]);
@@ -89,97 +95,64 @@ function JobApplications() {
     }
   };
 
-  // On mount, fetch all jobs
   useEffect(() => {
     fetchJobs();
   }, []);
 
-  // Handle job selection from dropdown
   const handleJobChange = (e) => {
     const jobId = e.target.value;
     setSelectedJobId(jobId);
     setSelectedCandidates([]);
     if (jobId) {
-      // Fetch submissions for the newly selected job
-      fetchSubmissions(jobId);
+      fetchSubmissions(jobId, selectedStatus);
     } else {
       setSubmissions([]);
     }
   };
 
-  // Toggle candidate expand/collapse
   const handleCandidateClick = (candidate) => {
-    const isAlreadySelected = selectedCandidates.some(
-      (c) => c.email === candidate.email
-    );
-    if (isAlreadySelected) {
-      setSelectedCandidates(
-        selectedCandidates.filter((c) => c.email !== candidate.email)
-      );
-    } else {
+    const isAlreadySelected = selectedCandidates.some((c) => c.email === candidate.email);
+    if (!isAlreadySelected) {
       setSelectedCandidates([...selectedCandidates, candidate]);
     }
   };
 
-  // Filter: minimum years of experience
-  const handleExperienceChange = (e) => {
-    setMinExperience(Number(e.target.value));
-    setSelectedCandidates([]);
-  };
+  const handleStatusUpdate = async (sub_id, status) => {
+    try {
+      const response = await fetch(`${API_BASE}/jobs/submissions/${sub_id}/status`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
 
-  // Filter: skill
-  const handleSkillChange = (e) => {
-    setSelectedSkill(e.target.value.toLowerCase());
-    setSelectedCandidates([]);
-  };
-
-  // Sort toggle (ATS score vs. submission date)
-  const handleSortChange = () => {
-    setSortBy((prevSortBy) =>
-      prevSortBy === "atsScore" ? "submissionDate" : "atsScore"
-    );
-  };
-
-  // Filter logic
-  const filteredCandidates = submissions.filter((candidate) => {
-    // If Q_Experience is stored as "5 years", parse out the number
-    let experienceYears = 0;
-    if (candidate.responses?.Q_Experience) {
-      experienceYears = parseInt(
-        candidate.responses.Q_Experience.replace(/\D/g, ""),
-        10
-      );
-      if (isNaN(experienceYears)) {
-        experienceYears = 0;
+      if (response.ok) {
+        setStatusUpdate((prevState) => ({
+          ...prevState,
+          [sub_id]: status,
+        }));
+      } else {
+        throw new Error("Failed to update status.");
       }
+    } catch (err) {
+      setError(err.message || "Error updating status.");
+      console.error(err);
     }
-
-    const matchesExperience = experienceYears >= minExperience;
-
-    // Skill filter: compare input skill to Q_Skills array (if any)
-    const candidateSkills = candidate.responses?.Q_Skills || [];
-    const matchesSkill =
-      !selectedSkill ||
-      candidateSkills.some((skill) =>
-        skill.toLowerCase().includes(selectedSkill)
-      );
-
-    return matchesExperience && matchesSkill;
-  });
+  };
 
   // Sorting logic
-  const sortedCandidates = filteredCandidates.sort((a, b) => {
+  const sortedCandidates = submissions.sort((a, b) => {
     if (sortBy === "atsScore") {
       return b.atsScore - a.atsScore;
     } else {
-      // Ascending by submission date
       return new Date(a.submissionDate) - new Date(b.submissionDate);
     }
   });
 
   return (
     <div className="relative min-h-screen flex flex-col justify-between bg-gray-100 p-6">
-      {/* Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
         className="absolute top-4 left-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
@@ -206,9 +179,7 @@ function JobApplications() {
 
           {/* Job Selection */}
           <div className="mb-6">
-            <label className="block font-medium mb-2 text-lg">
-              Select Job ID:
-            </label>
+            <label className="block font-medium mb-2 text-lg">Select Job ID:</label>
             <select
               value={selectedJobId}
               onChange={handleJobChange}
@@ -227,55 +198,57 @@ function JobApplications() {
             </select>
           </div>
 
-          {/* Filter and Sort Controls */}
-          {selectedJobId && submissions.length > 0 && (
-            <>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block font-medium mb-2 text-lg">
-                    Filter by Experience (years):
-                  </label>
-                  <select
-                    value={minExperience}
-                    onChange={handleExperienceChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
-                  >
-                    <option value="0">All Candidates</option>
-                    <option value="2">Greater than 2 years</option>
-                    <option value="3">Greater than 3 years</option>
-                    <option value="5">Greater than 5 years</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-medium mb-2 text-lg">
-                    Filter by Skill:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter skill..."
-                    value={selectedSkill}
-                    onChange={handleSkillChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg text-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Sorting Toggle */}
-              <div className="mb-6">
-                <label className="block font-medium mb-2 text-lg">
-                  Sort by:
-                </label>
+          {/* Status Filter (Button Group) */}
+          {selectedJobId && (
+            <div className="mb-6">
+              <label className="block font-medium mb-2 text-lg">Filter by Status:</label>
+              <div className="flex space-x-4">
                 <button
-                  onClick={handleSortChange}
-                  className="w-full py-3 bg-blue-500 text-white text-lg rounded-lg hover:bg-blue-600 transition"
+                  onClick={() => {
+                    setSelectedStatus("all");
+                    fetchSubmissions(selectedJobId, ""); // fetch all
+                  }}
+                  className={`px-4 py-2 rounded-lg text-lg font-semibold ${
+                    selectedStatus === "all" ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
                 >
-                  {sortBy === "atsScore"
-                    ? "Sort by Submission Date"
-                    : "Sort by ATS Score"}
+                  All
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedStatus("applied");
+                    fetchSubmissions(selectedJobId, "applied");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-lg font-semibold ${
+                    selectedStatus === "applied" ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+                >
+                  Applied
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedStatus("under_review");
+                    fetchSubmissions(selectedJobId, "under_review");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-lg font-semibold ${
+                    selectedStatus === "under_review" ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+                >
+                  Under Review
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedStatus("rejected");
+                    fetchSubmissions(selectedJobId, "rejected");
+                  }}
+                  className={`px-4 py-2 rounded-lg text-lg font-semibold ${
+                    selectedStatus === "rejected" ? "bg-blue-500 text-white" : "bg-gray-200"
+                  }`}
+                >
+                  Rejected
                 </button>
               </div>
-            </>
+            </div>
           )}
 
           {/* Candidates List */}
@@ -283,9 +256,7 @@ function JobApplications() {
             <div className="mb-6">
               <h3 className="text-2xl font-semibold mb-4">Candidates:</h3>
               {sortedCandidates.map((candidate) => {
-                const isSelected = selectedCandidates.some(
-                  (c) => c.email === candidate.email
-                );
+                const isSelected = selectedCandidates.some((c) => c.email === candidate.email);
                 return (
                   <div
                     key={candidate.email}
@@ -298,6 +269,7 @@ function JobApplications() {
                   >
                     <h4 className="text-xl font-semibold">{candidate.name}</h4>
                     <p className="text-gray-600">{candidate.email}</p>
+                    <p className="text-sm text-gray-500">Status: {statusUpdate[candidate.id] || candidate.status}</p>
                     {isSelected && (
                       <>
                         <p>
@@ -307,7 +279,6 @@ function JobApplications() {
                           <strong>Submission Date:</strong>{" "}
                           {new Date(candidate.submissionDate).toLocaleDateString()}
                         </p>
-                        {/* Show the form responses (if any) */}
                         {candidate.responses &&
                           Object.entries(candidate.responses).map(([key, value]) => {
                             if (Array.isArray(value)) {
@@ -324,6 +295,20 @@ function JobApplications() {
                               );
                             }
                           })}
+                        <div className="flex mt-4">
+                          <button
+                            onClick={() => handleStatusUpdate(candidate.id, "under_review")}
+                            className="px-4 py-2 bg-green-500 text-white rounded-lg mr-2"
+                          >
+                            Review
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(candidate.id, "rejected")}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>

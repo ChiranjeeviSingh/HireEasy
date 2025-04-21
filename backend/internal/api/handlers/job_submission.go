@@ -73,16 +73,33 @@ func GetFormSubmissions(c *gin.Context) {
 		return
 	}
 	
-	// Construct query
-	query := `
-		SELECT id, job_id, username, email, skills, resume_url, ats_score, status, created_at
-		FROM job_submissions
-		WHERE job_id = $1
-		ORDER BY created_at DESC
-	`
+	// Get status filter from query parameter
+	status := c.Query("status")
+	
+	// Construct query based on whether status filter is provided
+	var query string
+	var args []interface{}
+	
+	if status != "" {
+		query = `
+			SELECT id, job_id, username, email, skills, resume_url, ats_score, status, created_at
+			FROM job_submissions
+			WHERE job_id = $1 AND status = $2
+			ORDER BY created_at DESC
+		`
+		args = []interface{}{jobID, status}
+	} else {
+		query = `
+			SELECT id, job_id, username, email, skills, resume_url, ats_score, status, created_at
+			FROM job_submissions
+			WHERE job_id = $1
+			ORDER BY created_at DESC
+		`
+		args = []interface{}{jobID}
+	}
 
 	// Debug the query
-	log.Printf("Executing query: %s with job_id=%s", query, jobID)
+	log.Printf("Executing query: %s with args: %v", query, args)
 
 	var submissions []struct {
 		ID        int            `json:"id" db:"id"`
@@ -96,17 +113,57 @@ func GetFormSubmissions(c *gin.Context) {
 		CreatedAt time.Time      `json:"created_at" db:"created_at"`
 	}
 
-	err = db.Select(&submissions, query, jobID)
+	err = db.Select(&submissions, query, args...)
 	if err != nil {
 		log.Printf("Error retrieving job submissions: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve submissions"})
 		return
 	}
 
-	log.Printf("Found %d submissions for job ID: %s", len(submissions), jobID)
+	log.Printf("Found %d submissions for job ID: %s with status: %s", len(submissions), jobID, status)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Job submissions retrieved successfully",
 		"data":    submissions,
+	})
+}
+
+// UpdateSubmissionStatusH handles updating the status of a job submission
+func UpdateSubmissionStatusH(c *gin.Context) {
+	// Get submission ID from URL
+	submissionID := c.Param("submission_id")
+	if submissionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "submission ID is required"})
+		return
+	}
+
+	// Parse request body
+	var request struct {
+		Status string `json:"status" binding:"required,oneof=applied under_review shortlisted rejected selected"`
+	}
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update submission status in database
+	db := database.GetDB()
+	query := "UPDATE job_submissions SET status = $1 WHERE id = $2 RETURNING id, status"
+	
+	var updatedID int
+	var updatedStatus string
+	err := db.QueryRow(query, request.Status, submissionID).Scan(&updatedID, &updatedStatus)
+	if err != nil {
+		log.Printf("Error updating submission status: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update submission status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Submission status updated successfully",
+		"data": gin.H{
+			"id":     updatedID,
+			"status": updatedStatus,
+		},
 	})
 } 
