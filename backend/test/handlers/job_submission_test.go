@@ -789,3 +789,186 @@ func TestGetFormSubmissions_DateFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateSubmissionStatusH_Success(t *testing.T) {
+	// Clean up before test
+	test.CleanupTestDB(db)
+
+	// Insert a test user and set up router
+	userID, _ := test.InsertTestUser(db)
+	router := test.SetupTestRouter()
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", userID)
+		c.Next()
+	})
+
+	// Set up routes
+	router.PUT("/api/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)
+
+	// Create a test submission
+	submissionID := createTestSubmission(t, router, userID)
+
+	// Update status
+	requestBody := map[string]interface{}{
+		"status": "under_review",
+	}
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("PUT", "/api/jobs/submissions/"+submissionID+"/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	// Verify response content
+	var response map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, "Submission status updated successfully", response["message"])
+	assert.Equal(t, "under_review", response["data"].(map[string]interface{})["status"])
+}
+
+func TestUpdateSubmissionStatusH_InvalidSubmissionID(t *testing.T) {
+	// Clean up before test
+	test.CleanupTestDB(db)
+
+	// Insert a test user and set up router
+	userID, _ := test.InsertTestUser(db)
+	router := test.SetupTestRouter()
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", userID)
+		c.Next()
+	})
+
+	// Set up routes
+	router.PUT("/api/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)
+
+	// Try to update status with invalid submission ID
+	requestBody := map[string]interface{}{
+		"status": "under_review",
+	}
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("PUT", "/api/jobs/submissions/invalid_id/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestUpdateSubmissionStatusH_InvalidStatus(t *testing.T) {
+	// Clean up before test
+	test.CleanupTestDB(db)
+
+	// Insert a test user and set up router
+	userID, _ := test.InsertTestUser(db)
+	router := test.SetupTestRouter()
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", userID)
+		c.Next()
+	})
+
+	// Set up routes
+	router.PUT("/api/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)
+
+	// Create a test submission
+	submissionID := createTestSubmission(t, router, userID)
+
+	// Try to update status with invalid status value
+	requestBody := map[string]interface{}{
+		"status": "invalid_status",
+	}
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("PUT", "/api/jobs/submissions/"+submissionID+"/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestUpdateSubmissionStatusH_NonExistentSubmission(t *testing.T) {
+	// Clean up before test
+	test.CleanupTestDB(db)
+
+	// Insert a test user and set up router
+	userID, _ := test.InsertTestUser(db)
+	router := test.SetupTestRouter()
+	router.Use(func(c *gin.Context) {
+		c.Set("userID", userID)
+		c.Next()
+	})
+
+	// Set up routes
+	router.PUT("/api/jobs/submissions/:submission_id/status", handlers.UpdateSubmissionStatusH)
+
+	// Try to update status for non-existent submission
+	requestBody := map[string]interface{}{
+		"status": "under_review",
+	}
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("PUT", "/api/jobs/submissions/999999/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+}
+
+// Helper function to create a test submission
+func createTestSubmission(t *testing.T, router *gin.Engine, userID int) string {
+	// Create a test job first
+	jobID := createTestJob(t, router, userID)
+
+	// Create form values
+	formValues := map[string]string{
+		"job_id":    jobID,
+		"username":  "Test User",
+		"email":     "test@example.com",
+		"form_data": `{"experience":"2 years", "location":"Remote", "skills":["Go", "AWS"]}`,
+	}
+
+	// Create test request
+	req, err := createTestMultipartRequest(t, "/api/jobs/"+jobID+"/apply", formValues, "resume", "test_resume.pdf")
+	assert.NoError(t, err)
+
+	// Add test header to avoid actual S3 uploads
+	req.Header.Set("X-Test-Mode", "true")
+
+	// Create recorder and serve request
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, req)
+
+	// Parse response to get submission ID
+	var response map[string]interface{}
+	err = json.Unmarshal(recorder.Body.Bytes(), &response)
+	assert.NoError(t, err)
+
+	// Return the submission ID
+	return fmt.Sprintf("%d", int(response["data"].(map[string]interface{})["id"].(float64)))
+}
+
+// Helper function to create a test job
+func createTestJob(t *testing.T, router *gin.Engine, userID int) string {
+	requestBody := map[string]interface{}{
+		"title":       "Test Job",
+		"description": "Test Job Description",
+		"status":      "active",
+	}
+	jsonBody, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest("POST", "/api/jobs", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	assert.NoError(t, err)
+
+	return response["job_id"].(string)
+}
