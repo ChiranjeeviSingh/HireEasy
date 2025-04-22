@@ -4,12 +4,28 @@ HireEasy is a comprehensive job application management system that allows employ
 
 ## Features
 
-- Job listing management
-- Customizable application forms
-- Resume upload and storage
-- Automatic ATS scoring based on skills
-- Filtering and sorting of job applications
-- User authentication and management
+HireEasy is structured around two main user portals, each tailored to specific roles:
+
+### 1. HR Portal
+
+The HR Portal serves as the central hub for all recruitment activities. HR professionals use this portal to:
+
+- Create and manage job postings
+- Design custom application questionnaires
+- Share job opportunities with candidates
+- Review incoming applications
+- Schedule interviews with promising candidates
+- Track the entire hiring pipeline
+
+### 2. Interviewer Portal
+
+The Interviewer Portal focuses on the evaluation phase of the hiring process. Interviewers use this portal to:
+
+- Manage their professional profiles and expertise areas
+- Set their availability for conducting interviews
+- View their assigned interviews and candidate details
+- Provide structured feedback on candidates
+- Track interview outcomes
 
 ## System Architecture
 
@@ -30,95 +46,95 @@ The application consists of:
 
 ## Running the Application
 
+
 ### Prerequisites
 
 - Go 1.16 or newer
 - PostgreSQL database
 - AWS account (for S3 storage)
 
-### Environment Variables
 
-The application requires the following environment variables:
+## Setup Instructions
 
-```bash
-# PostgreSQL Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_NAME=app_db
+1. Clone the repository:
+   ```
+   git clone https://github.com/ChiranjeeviSingh/HireEasy/blob/main/backend/README.md
+   ```
 
-# AWS Configuration
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=us-east-1
-S3_BUCKET=your_bucket_name
+2. Install frontend dependencies**:
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-# Optional Test Mode Configuration
-# Set to "true" to bypass actual S3 uploads
-S3_TEST_MODE=true
-```
+3. Start the frontend server**:
+   ```bash
+   npm start
+   ```
 
-### Running the Server
+4. Navigate to the backend directory:
+   ```
+   cd HireEasy/backend
+   ```
 
-Navigate to the backend directory and run the server:
+5. Install dependencies:
+   ```
+   go mod tidy
+   ```
 
-```bash
-cd backend
-go run cmd/server/main.go
-```
+6. Set up the PostgreSQL database using the provided schema:
+   ```
+   psql -U <username> -d <database> -f internal/database/migrations/schema.sql
+   ```
 
-Alternatively, set the required environment variables inline:
 
-```bash
-cd backend
-AWS_ACCESS_KEY_ID=your_access_key \
-AWS_SECRET_ACCESS_KEY=your_secret_key \
-AWS_REGION=us-east-1 \
-S3_BUCKET=your_bucket_name \
-go run cmd/server/main.go
-```
+7. Setup Environment Variables:
 
-For testing without S3 uploads:
+  ```bash
+  # PostgreSQL Configuration
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_USER=your_username
+  DB_PASSWORD=your_password
+  DB_NAME=app_db
+  ```
 
-```bash
-cd backend
-S3_TEST_MODE=true go run cmd/server/main.go
-```
+  Optional Test Mode Configuration: Set to "true" to bypass actual S3 uploads
+  ```bash
+  S3_TEST_MODE=true
+  ```
 
-### API Endpoints
+8. Run the backend application:
+  ```bash
+  export TEST_MODE=false S3_TEST_MODE=false \
+  AWS_REGION=us-east-1 \
+  S3_BUCKET=hireeasy-resumes \
+  DB_USER=reshma \
+  DB_PASSWORD=postgres \
+  && go run cmd/server/main.go
+  ```
 
-#### Job Submissions
+## Testing
 
-- **POST** `/api/forms/:form_uuid/submissions`: Submit a job application
-  - Required fields: job_id, user_id, username, email, form_data, resume
-  - Example:
-    ```
-    curl -X POST http://localhost:8080/api/forms/4d9a4320-f1d1-43f2-8477-edd07f557442/submissions \
-      -F "job_id=5678" \
-      -F "user_id=2003" \
-      -F "username=Test User" \
-      -F "email=testuser@example.com" \
-      -F "form_data={\"experience\":\"5 years\", \"location\":\"Remote\", \"skills\": [\"Go\", \"AWS\"]}" \
-      -F "resume=@resume.pdf"
-    ```
+1. Run backend unittests:
+   ```
+   go test ./test/handlers/ -v
+   ```
 
-- **GET** `/api/forms/:form_uuid/submissions`: Get submissions for a form
-  - Optional query parameters:
-    - `sort_by`: Field to sort by (ats_score or created_at)
-    - `limit`: Maximum number of results to return
-    - `date`: Filter by date (all, today, or YYYY-MM-DD format)
-  - Example:
-    ```
-    curl http://localhost:8080/api/forms/4d9a4320-f1d1-43f2-8477-edd07f557442/submissions?sort_by=ats_score&limit=10&date=all
-    ```
+2. Frontend Testing:
+  The project includes both unit tests (using Jest and React Testing Library) and end-to-end tests (using Cypress).
 
-## ATS Scoring System
+  ### Unit Tests
+  Unit tests focus on individual components and functionality.
+  ```
+  npm test
+  ```
 
-The ATS scoring system calculates a score based on:
-- Base score of 70 points
-- Additional points for each skill (5 points per skill)
-- Maximum score is capped at 100
+  ### E2E Tests
+  End-to-end tests simulate real user interactions with the application.
+  ```
+  npm run cypress:run
+  ```
 
 ## Troubleshooting
 
@@ -135,3 +151,6 @@ If you encounter database connection errors:
 1. Verify PostgreSQL is running
 2. Check database credentials
 3. Ensure database and required tables exist
+
+## API Documentation
+For more details on API endpoints, please refer to the [Backend Documentation](https://documenter.getpostman.com/view/41938964/2sB2cRCQ89).
