@@ -1,0 +1,17 @@
+{
+  "jobSeeker": {
+    "username": "testjobseeker",
+    "email": "jobseeker@example.com",
+    "password": "Test1234!",
+    "firstName": "Test",
+    "lastName": "JobSeeker",
+    "skills": ["JavaScript", "React", "Node.js"]
+  },
+  "employer": {
+    "username": "testemployer",
+    "email": "employer@example.com",
+    "password": "Test1234!",
+    "companyName": "Test Company Inc.",
+    "industry": "Technology"
+  }
+} 

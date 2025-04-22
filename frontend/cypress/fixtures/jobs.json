@@ -1,0 +1,34 @@
+{
+  "jobs": [
+    {
+      "id": "job-1",
+      "title": "Frontend Developer",
+      "company": "Test Company Inc.",
+      "location": "Remote",
+      "description": "Looking for a skilled frontend developer with React experience.",
+      "requirements": ["3+ years experience", "React", "JavaScript", "HTML/CSS"],
+      "salary": "$80,000 - $120,000",
+      "posted": "2023-04-10T12:00:00Z"
+    },
+    {
+      "id": "job-2",
+      "title": "Backend Engineer",
+      "company": "Tech Solutions Ltd.",
+      "location": "New York, NY",
+      "description": "Backend engineer needed for building scalable APIs.",
+      "requirements": ["Node.js", "Express", "MongoDB", "API design"],
+      "salary": "$90,000 - $130,000",
+      "posted": "2023-04-15T10:30:00Z"
+    },
+    {
+      "id": "job-3",
+      "title": "Full Stack Developer",
+      "company": "Innovative Startup",
+      "location": "San Francisco, CA",
+      "description": "Full stack developer needed for a fast-growing startup.",
+      "requirements": ["React", "Node.js", "PostgreSQL", "AWS"],
+      "salary": "$100,000 - $150,000",
+      "posted": "2023-04-18T09:15:00Z"
+    }
+  ]
+} 
