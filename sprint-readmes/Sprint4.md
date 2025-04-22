@@ -1,6 +1,67 @@
 # Sprint 4 Documentation
 ## Tasks Completed in Sprint 4
 
+### Functionality Added in This Sprint - Frontend 
+
+## Frontend Component Descriptions
+
+#### 9. ScheduleInterviews.jsx
+**Purpose:** Facilitates the interview scheduling process.  
+**Features:**
+- Interface to match candidates with interviewers
+- Date and time selection based on availability
+- Email notification system
+- Interview status tracking
+
+### Interviewer Components
+
+#### 10. InterviewerDashboard.jsx
+**Purpose:** Main navigation hub for interviewers.  
+**Features:**
+- Access to profile management
+- Calendar viewing and availability setting
+- Interface for accessing scheduled interviews
+- Simple, focused design for interviewer needs
+
+#### 11. InterviewerProfile.jsx
+**Purpose:** Allows interviewers to manage their professional profiles.  
+**Features:**
+- Personal information management
+- Professional details and expertise areas
+- Availability preferences
+- Contact information updates
+
+#### 12. InterviewerCalendar.jsx
+**Purpose:** Manages interviewer availability scheduling.  
+**Features:**
+- Calendar interface for setting available time slots
+- Recurring availability options
+- Integration with scheduling system
+- View of upcoming scheduled interviews
+
+#### 13. InterviewerInterviews.jsx
+**Purpose:** Provides interviewers with access to their assigned interviews.  
+**Features:**
+- List of scheduled interviews
+- Candidate information and application details
+- Interview notes and feedback entry
+- Status updates for completed interviews
+
+## Testing
+The project includes both unit tests (using Jest and React Testing Library) and end-to-end tests (using Cypress).
+
+### Unit Tests
+Unit tests focus on individual components and functionality.
+```
+npm test
+```
+
+### E2E Tests
+End-to-end tests simulate real user interactions with the application.
+```
+npm run cypress:run
+```
+
 ### Functionality Added in This Sprint - Backend 
 
 #### Interview Management Routes (Reshma)

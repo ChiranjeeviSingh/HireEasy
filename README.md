@@ -52,7 +52,11 @@ The application consists of:
 - Go 1.16 or newer
 - PostgreSQL database
 - AWS account (for S3 storage)
-
+- React.js
+- React Router
+- Cypress
+- Jest
+- React Testing Library 
 
 ## Setup Instructions
 
