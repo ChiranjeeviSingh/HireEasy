@@ -27,6 +27,227 @@ The Interviewer Portal focuses on the evaluation phase of the hiring process. In
 - Provide structured feedback on candidates
 - Track interview outcomes
 
+
+
+## Detailed Component Descriptions
+
+### Authentication Components
+
+#### 1. Login
+**Purpose:** Provides user authentication functionality.  
+**Features:**
+- Email and password-based login
+- Role-based redirection (HR to HR dashboard, Interviewer to Interviewer dashboard)
+- Error handling and loading states
+- Navigation to registration for new users
+
+#### 2. Register
+**Purpose:** Allows new users to create accounts.  
+**Features:**
+- Registration form with validation
+- Role selection (HR or Interviewer)
+- Account creation with appropriate permissions
+- Redirection to login after successful registration
+
+### HR Components
+
+#### 3. Dashboard
+**Purpose:** Main navigation hub for HR professionals.  
+**Features:**
+- Central menu for accessing all HR functions
+- Navigation buttons for job management, questionnaires, applications, and interview scheduling
+- Clean, user-friendly interface
+
+#### 4. JobPosting
+**Purpose:** Enables HR to create and publish new job openings.  
+**Features:**
+- Form for creating detailed job descriptions
+- Fields for title, description, requirements, and other job details
+- Submission to backend API for storage
+- Validation of required fields
+
+#### 5. Questionnaire
+**Purpose:** Allows HR to create custom application forms and screening questionnaires.  
+**Features:**
+- Dynamic form builder for creating questions
+- Support for multiple question types (multiple choice, text, etc.)
+- Ability to edit and reorder questions
+- Form ID generation for linking forms to job postings
+
+#### 6. ShareJob
+**Purpose:** Facilitates sharing job postings with potential candidates.  
+**Features:**
+- Interface to select job postings and associate them with questionnaires
+- Generation of unique application links for candidates
+- Options for sharing methods (link, email, etc.)
+- Management of active shared job listings
+
+#### 7. ViewJobs
+**Purpose:** Provides an overview of all posted jobs.  
+**Features:**
+- List view of all created job postings
+- Filter functionality for job searches
+- Basic job statistics
+- Navigation to detailed job views
+
+#### 8. JobApplications
+**Purpose:** Manages incoming job applications.  
+**Features:**
+- List of all received applications
+- Filtering and sorting capabilities
+- Review interface for applications
+- Status management (new, reviewed, interview scheduled, etc.)
+
+#### 9. ScheduleInterviews
+**Purpose:** Facilitates the interview scheduling process.  
+**Features:**
+- Interface to match candidates with interviewers
+- Date and time selection based on availability
+- Email notification system
+- Interview status tracking
+
+### Interviewer Components
+
+#### 10. InterviewerDashboard
+**Purpose:** Main navigation hub for interviewers.  
+**Features:**
+- Access to profile management
+- Calendar viewing and availability setting
+- Interface for accessing scheduled interviews
+- Simple, focused design for interviewer needs
+
+#### 11. InterviewerProfile
+**Purpose:** Allows interviewers to manage their professional profiles.  
+**Features:**
+- Personal information management
+- Professional details and expertise areas
+- Availability preferences
+- Contact information updates
+
+#### 12. InterviewerCalendar
+**Purpose:** Manages interviewer availability scheduling.  
+**Features:**
+- Calendar interface for setting available time slots
+- Recurring availability options
+- Integration with scheduling system
+- View of upcoming scheduled interviews
+
+#### 13. InterviewerInterviews
+**Purpose:** Provides interviewers with access to their assigned interviews.  
+**Features:**
+- List of scheduled interviews
+- Candidate information and application details
+- Interview notes and feedback entry
+- Status updates for completed interviews
+
+### Applicant Components
+
+#### 14. Apply
+**Purpose:** Serves as the application interface for job seekers.  
+**Features:**
+- Job information display
+- Dynamic form rendering based on the associated questionnaire
+- File upload for resumes and supporting documents
+- Submission confirmation and tracking
+
+## Detailed Project Flow
+
+### 1. Authentication Flow
+
+Both portals begin with a common authentication path:
+
+1. **Login Page** (`Login`):
+   - Users enter credentials (email and password)
+   - The system validates credentials and determines user role
+   - Based on role, users are redirected to their respective dashboards
+   
+2. **Registration Page** (`Register`):
+   - New users create accounts by providing personal information
+   - Users select their role (HR or Interviewer)
+   - Account creation initiates with appropriate permissions
+   - Users are redirected to login after successful registration
+
+### 2. HR Portal Flow
+
+After authentication, the HR workflow follows this path:
+
+1. **HR Dashboard** (`Dashboard`):
+   - Central navigation hub with access to all HR functions
+   - Quick access buttons to key features
+
+2. **Job Posting** (`JobPosting`):
+   - HR creates detailed job descriptions
+   - Specifies title, requirements, responsibilities, and other key details
+   - Publishes listings to the job database
+
+3. **Questionnaire Creation** (`Questionnaire`):
+   - HR designs custom application forms
+   - Creates screening questions with various formats (multiple choice, text, etc.)
+   - Generates a unique form ID for linking to job postings
+
+4. **Job Sharing** (`ShareJob`):
+   - HR associates job postings with appropriate questionnaires
+   - Generates application links for candidates
+   - Manages distribution of job opportunities
+
+5. **Application Review** (`JobApplications`):
+   - HR views and evaluates incoming applications
+   - Filters applications by various criteria
+   - Reviews candidate qualifications and responses
+   - Marks promising candidates for interviews
+
+6. **Interview Scheduling** (`ScheduleInterviews`):
+   - HR matches candidates with appropriate interviewers
+   - Schedules interviews based on interviewer availability
+   - Sends notifications to all parties
+   - Tracks interview status
+
+7. **Job Monitoring** (`ViewJobs`):
+   - HR reviews all active job postings
+   - Tracks application statistics
+   - Updates or closes positions as needed
+
+### 3. Interviewer Portal Flow
+
+The interviewer workflow includes:
+
+1. **Interviewer Dashboard** (`InterviewerDashboard`):
+   - Main hub for interviewer activities
+   - Navigation to profile, calendar, and interview sections
+
+2. **Profile Management** (`InterviewerProfile`):
+   - Interviewers maintain their professional profiles
+   - Specify areas of expertise and qualifications
+   - Update contact information and preferences
+
+3. **Availability Setting** (`InterviewerCalendar`):
+   - Interviewers define their available time slots
+   - Set up recurring availability patterns
+   - View their already scheduled interviews
+   - Block out unavailable periods
+
+4. **Interview Management** (`InterviewerInterviews`):
+   - Access list of assigned interviews
+   - Review candidate information before interviews
+   - Enter feedback and evaluation after interviews
+   - Update interview status (completed, rescheduled, etc.)
+
+### 4. Candidate Flow
+
+While not a separate portal, candidates interact with the system through:
+
+1. **Application Process** (`Apply`):
+   - Candidates access job listings through shared links
+   - View job details and requirements
+   - Complete the questionnaire specific to that position
+   - Upload supporting documents
+   - Submit applications and receive confirmation
+
+2. **Post-Application**:
+   - Candidates may receive notifications about their application status
+   - Interview invitations are sent if selected
+   - Scheduling confirmations are provided
+
 ## System Architecture
 
 The application consists of:
