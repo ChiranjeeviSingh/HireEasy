@@ -1,40 +1,52 @@
 {
-    "name": "hireeasy-frontend",
-    "version": "1.0.0",
-    "private": true,
-    "dependencies": {
-        "ajv": "^8.12.0",
-        "ajv-keywords": "^5.1.0",
-        "axios": "^1.6.5",
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "react-router-dom": "^6.16.0",
-        "react-scripts": "^5.0.1",
-        "start": "^5.1.0"
-    },
-    "devDependencies": {
-        "eslint": "^8.53.0",
-        "eslint-plugin-react": "^7.33.2",
-        "typescript": "^4.9.5",
-        "webpack": "^5.88.0",
-        "webpack-dev-server": "^4.15.1"
-    },
-    "scripts": {
-        "start": "react-scripts start",
-        "build": "react-scripts build",
-        "test": "react-scripts test",
-        "eject": "react-scripts eject"
-    },
-    "browserslist": {
-        "production": [
-            ">0.2%",
-            "not dead",
-            "not op_mini all"
-        ],
-        "development": [
-            "last 1 chrome version",
-            "last 1 firefox version",
-            "last 1 safari version"
-        ]
-    }
+  "name": "hireeasy-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "ajv-keywords": "^5.1.0",
+    "axios": "^1.6.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.16.0",
+    "react-scripts": "^5.0.1",
+    "start": "^5.1.0"
+  },
+  "devDependencies": {
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.0",
+    "@testing-library/cypress": "^10.0.3",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "babel-loader": "^8.3.0",
+    "cypress": "^13.17.0",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react": "^7.33.2",
+    "html-webpack-plugin": "^5.5.0",
+    "start-server-and-test": "^2.0.11",
+    "typescript": "^4.9.5",
+    "webpack": "^5.88.0",
+    "webpack-dev-server": "^4.15.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --watchAll=false",
+    "eject": "react-scripts eject",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run",
+    "test:e2e": "start-server-and-test start http://localhost:3000 cypress:run",
+    "test:e2e:dev": "start-server-and-test start http://localhost:3000 cypress:open"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
 }

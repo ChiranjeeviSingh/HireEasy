@@ -279,7 +279,7 @@ function ScheduleInterviews() {
             className="w-full p-3 border border-gray-300 rounded-lg shadow focus:ring-2 focus:ring-blue-400"
           >
             <option value="">-- Select Job --</option>
-            {jobs.map((job) => (
+            {jobs?.map((job) => (
               <option key={job.job_id} value={job.job_id}>
                 {job.job_id}
               </option>
@@ -287,9 +287,9 @@ function ScheduleInterviews() {
           </select>
         </div>
 
-        {selectedJobId && candidates.length > 0 && (
+        {selectedJobId && candidates?.length > 0 && (
           <div className="grid gap-6 md:grid-cols-2">
-            {candidates.map((c) => (
+            {candidates?.map((c) => (
               <div
                 key={c.id}
                 className="p-6 bg-white rounded-lg shadow hover:shadow-lg transition"
@@ -304,7 +304,7 @@ function ScheduleInterviews() {
                 <p className="text-gray-600 mb-1">
                   📎 <strong>Resume:</strong> <a href={c.resume_url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Download</a>
                 </p>
-                {c.skills && c.skills.length > 0 && (
+                {c.skills?.length > 0 && (
                   <p className="text-gray-600 mb-1">🛠️ <strong>Skills:</strong> {c.skills.join(", ")}</p>
                 )}
 
@@ -333,11 +333,11 @@ function ScheduleInterviews() {
                 {showPopupFor === c.id && c.status !== "shortlisted" && (
                   <div className="mt-4 bg-gray-50 border border-gray-300 p-4 rounded-lg">
                     <h4 className="font-semibold mb-3 text-gray-800">Select a Time Slot:</h4>
-                    {availability.length === 0 ? (
+                    {availability?.length === 0 ? (
                       <p className="text-gray-500">No slots available.</p>
                     ) : (
                       <div className="grid gap-2">
-                        {availability.map((slot) => (
+                        {availability?.map((slot) => (
                           <button
                             key={slot.id}
                             onClick={() => handleScheduleInterview(c, slot)}
@@ -355,7 +355,7 @@ function ScheduleInterviews() {
           </div>
         )}
 
-        {selectedJobId && candidates.length === 0 && (
+        {selectedJobId && candidates?.length === 0 && (
           <p className="text-center text-gray-600 mt-10">No candidates available for this job.</p>
         )}
       </div>

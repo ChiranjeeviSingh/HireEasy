@@ -72,6 +72,27 @@ func GetFormSubmissions(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Job not found"})
 		return
 	}
+
+	// Get userID from context and verify HR authorization
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Check if the job was created by this HR
+	var isJobOwner bool
+	err = db.Get(&isJobOwner, "SELECT EXISTS(SELECT 1 FROM jobs WHERE job_id = $1 AND user_id = $2)", jobID, userID)
+	if err != nil {
+		log.Printf("Error checking job ownership: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify job ownership"})
+		return
+	}
+
+	if !isJobOwner {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "You are not authorized to view submissions for this job"})
+		return
+	}
 	
 	// Get status filter from query parameter
 	status := c.Query("status")

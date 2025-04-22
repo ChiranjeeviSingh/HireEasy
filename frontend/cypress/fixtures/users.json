@@ -1,0 +1,24 @@
+{
+  "hrUser": {
+    "email": "hr@example.com",
+    "password": "password123",
+    "role": "hr",
+    "name": "HR Manager"
+  },
+  "interviewerUser": {
+    "email": "interviewer@example.com",
+    "password": "password123",
+    "role": "interviewer",
+    "name": "Senior Developer",
+    "expertise": ["JavaScript", "React", "Node.js"],
+    "experience": 5
+  },
+  "candidateUser": {
+    "email": "candidate@example.com",
+    "password": "password123",
+    "role": "candidate",
+    "name": "John Doe",
+    "resume": "resume.pdf",
+    "atsScore": 85
+  }
+}

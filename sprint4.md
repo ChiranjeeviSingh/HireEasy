@@ -368,6 +368,193 @@ The application includes comprehensive tests for all major components:
   - Form validation
   - Data handling
 
+### Cypress Integration Tests
+
+#### Setup and Installation
+
+1. Install Cypress:
+
+```bash
+cd frontend
+npm install cypress --save-dev
+```
+
+2. Add Cypress scripts to package.json:
+
+```json
+{
+  "scripts": {
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
+  }
+}
+```
+
+3. Create Cypress configuration file (cypress.config.js):
+
+```javascript
+const { defineConfig } = require("cypress");
+
+module.exports = defineConfig({
+  e2e: {
+    baseUrl: "http://localhost:3000",
+    setupNodeEvents(on, config) {
+      // implement node event listeners here
+    },
+  },
+});
+```
+
+#### Test Structure
+
+Create the following test files in `frontend/cypress/e2e/`:
+
+1. **Authentication Tests** (`auth.cy.js`):
+
+```javascript
+describe("Authentication Flow", () => {
+  it("should login successfully", () => {
+    cy.visit("/login");
+    cy.get("[data-cy=email]").type("test@example.com");
+    cy.get("[data-cy=password]").type("password123");
+    cy.get("[data-cy=login-button]").click();
+    cy.url().should("include", "/dashboard");
+  });
+
+  it("should handle invalid credentials", () => {
+    cy.visit("/login");
+    cy.get("[data-cy=email]").type("invalid@example.com");
+    cy.get("[data-cy=password]").type("wrongpassword");
+    cy.get("[data-cy=login-button]").click();
+    cy.get("[data-cy=error-message]").should("be.visible");
+  });
+});
+```
+
+2. **Interviewer Profile Tests** (`interviewer-profile.cy.js`):
+
+```javascript
+describe("Interviewer Profile Management", () => {
+  beforeEach(() => {
+    cy.login("interviewer@example.com", "password123");
+  });
+
+  it("should update profile information", () => {
+    cy.visit("/interviewer-profile");
+    cy.get("[data-cy=job-title]").type("Senior Developer");
+    cy.get("[data-cy=experience]").type("5");
+    cy.get("[data-cy=expertise]").type("JavaScript, React, Node.js");
+    cy.get("[data-cy=save-profile]").click();
+    cy.get("[data-cy=success-message]").should("be.visible");
+  });
+});
+```
+
+3. **Interview Scheduling Tests** (`interview-scheduling.cy.js`):
+
+```javascript
+describe("Interview Scheduling", () => {
+  beforeEach(() => {
+    cy.login("hr@example.com", "password123");
+  });
+
+  it("should schedule an interview", () => {
+    cy.visit("/schedule-interviews");
+    cy.get("[data-cy=select-candidate]").select("John Doe");
+    cy.get("[data-cy=select-interviewer]").select("Jane Smith");
+    cy.get("[data-cy=select-date]").type("2024-04-25");
+    cy.get("[data-cy=select-time]").type("14:00");
+    cy.get("[data-cy=schedule-button]").click();
+    cy.get("[data-cy=success-message]").should("be.visible");
+  });
+});
+```
+
+4. **Interviewer Calendar Tests** (`interviewer-calendar.cy.js`):
+
+```javascript
+describe("Interviewer Calendar Management", () => {
+  beforeEach(() => {
+    cy.login("interviewer@example.com", "password123");
+  });
+
+  it("should add availability slot", () => {
+    cy.visit("/interviewer-calendar");
+    cy.get("[data-cy=add-slot]").click();
+    cy.get("[data-cy=date-input]").type("2024-04-25");
+    cy.get("[data-cy=start-time]").type("13:00");
+    cy.get("[data-cy=end-time]").type("14:00");
+    cy.get("[data-cy=save-slot]").click();
+    cy.get("[data-cy=slot-list]").should("contain", "13:00 - 14:00");
+  });
+});
+```
+
+#### Running Tests
+
+1. Start the development server:
+
+```bash
+cd frontend
+npm start
+```
+
+2. Open Cypress Test Runner:
+
+```bash
+npm run cypress:open
+```
+
+3. Run tests in headless mode:
+
+```bash
+npm run cypress:run
+```
+
+#### Test Commands
+
+```bash
+# Install Cypress
+npm install cypress --save-dev
+
+# Add Cypress scripts to package.json
+npm pkg set scripts.cypress:open="cypress open"
+npm pkg set scripts.cypress:run="cypress run"
+
+# Initialize Cypress
+npx cypress open
+
+# Run specific test file
+npx cypress run --spec "cypress/e2e/auth.cy.js"
+
+# Run tests in specific browser
+npx cypress run --browser chrome
+
+# Run tests with video recording
+npx cypress run --record --key YOUR_RECORD_KEY
+```
+
+#### Best Practices
+
+1. Use data-cy attributes for selectors
+2. Implement custom commands for common actions
+3. Use fixtures for test data
+4. Implement proper cleanup after tests
+5. Use environment variables for sensitive data
+
+#### Integration with CI/CD
+
+Add to your CI/CD pipeline:
+
+```yaml
+steps:
+  - name: Run Cypress Tests
+    run: |
+      cd frontend
+      npm install
+      npm run cypress:run
+```
+
 ## Technical Stack
 
 ### Frontend
