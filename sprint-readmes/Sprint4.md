@@ -5,7 +5,7 @@
 
 ## Frontend Component Descriptions
 
-#### 9. ScheduleInterviews.jsx
+#### 1. ScheduleInterviews.jsx
 **Purpose:** Facilitates the interview scheduling process.  
 **Features:**
 - Interface to match candidates with interviewers
@@ -15,7 +15,7 @@
 
 ### Interviewer Components
 
-#### 10. InterviewerDashboard.jsx
+#### 2. InterviewerDashboard.jsx
 **Purpose:** Main navigation hub for interviewers.  
 **Features:**
 - Access to profile management
@@ -23,7 +23,7 @@
 - Interface for accessing scheduled interviews
 - Simple, focused design for interviewer needs
 
-#### 11. InterviewerProfile.jsx
+#### 3. InterviewerProfile.jsx
 **Purpose:** Allows interviewers to manage their professional profiles.  
 **Features:**
 - Personal information management
@@ -31,7 +31,7 @@
 - Availability preferences
 - Contact information updates
 
-#### 12. InterviewerCalendar.jsx
+#### 4. InterviewerCalendar.jsx
 **Purpose:** Manages interviewer availability scheduling.  
 **Features:**
 - Calendar interface for setting available time slots
@@ -39,7 +39,7 @@
 - Integration with scheduling system
 - View of upcoming scheduled interviews
 
-#### 13. InterviewerInterviews.jsx
+#### 5. InterviewerInterviews.jsx
 **Purpose:** Provides interviewers with access to their assigned interviews.  
 **Features:**
 - List of scheduled interviews
