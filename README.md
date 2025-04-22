@@ -379,3 +379,6 @@ If you encounter database connection errors:
 
 ## API Documentation
 For more details on API endpoints, please refer to the [Backend Documentation](https://documenter.getpostman.com/view/41938964/2sB2cRCQ89).
+
+## Video Demo
+https://drive.google.com/file/d/1d_vLmrg_KtDIHsXMdqdsa0sBlKxAti-v/view?usp=sharing
