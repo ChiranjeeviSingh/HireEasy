@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS jobs (
     id SERIAL PRIMARY KEY, --id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    job_id VARCHAR(255) NOT NULL UNIQUE,
+    job_id VARCHAR(255) NOT NULL,
     user_id INTEGER NOT NULL REFERENCES users(id),
     job_title VARCHAR(255) NOT NULL, -- length validation in FE
     job_description TEXT NOT NULL,
@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     skills_required VARCHAR[] NOT NULL, -- CHECK (array_length(skills_required, 1) > 0), can vaidate in FE
     attributes JSONB, --FE Q&A dump
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (job_id, user_id)
     );
 
 
