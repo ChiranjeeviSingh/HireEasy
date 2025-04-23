@@ -255,7 +255,7 @@ The application consists of:
 - **Backend**: Go server with Gin framework
 - **Database**: PostgreSQL
 - **Storage**: AWS S3 for resume storage
-- **Frontend**: (Not included in this repository)
+- **Frontend**: React for components along with Cypress for testing
 
 ## Database Structure
 
