@@ -27,7 +27,7 @@ export function ShareJob() {
       const data = await response.json();
       console.log("Fetched Jobs:", data);
       if (response.ok) {
-        setJobPostings(data);
+        setJobPostings(data || []);  // Ensure it's an array
       } else {
         setError("Failed to fetch job postings.");
       }
@@ -51,7 +51,7 @@ export function ShareJob() {
       const data = await response.json();
       console.log("Fetched Forms:", data);
       if (response.ok) {
-        setQuestionnaires(data);
+        setQuestionnaires(data || []);  // Ensure it's an array
       } else {
         setError("Failed to fetch form templates.");
       }
@@ -141,6 +141,7 @@ export function ShareJob() {
             Share Job
           </h2>
 
+          {loading && <p className="text-blue-500 text-center">Loading...</p>}
           {error && <p className="text-red-500 text-center">{error}</p>}
 
           {/* Dropdowns for Job ID and Form ID */}
@@ -152,7 +153,7 @@ export function ShareJob() {
               className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
             >
               <option value="">-- Select Job ID --</option>
-              {jobPostings.length > 0 ? (
+              {jobPostings && jobPostings.length > 0 ? (
                 jobPostings.map((job) => (
                   <option key={job.job_id} value={job.job_id}>
                     {job.job_id}
@@ -172,7 +173,7 @@ export function ShareJob() {
               className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
             >
               <option value="">-- Select Form ID --</option>
-              {questionnaires.length > 0 ? (
+              {questionnaires && questionnaires.length > 0 ? (
                 questionnaires.map((form) => (
                   <option key={form.form_template_id} value={form.form_template_id}>
                     {form.form_template_id}
@@ -187,6 +188,7 @@ export function ShareJob() {
           <button
             onClick={fetchJobAndFormData}
             className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition"
+            disabled={loading}
           >
             Generate Job Application
           </button>
@@ -208,33 +210,38 @@ export function ShareJob() {
                 ))}
 
               <h3 className="text-2xl font-semibold mt-6">Job Questionnaire</h3>
-              {questions.fields.map((question) => (
-                <div key={question.question_id} className="mt-3">
-                  <p className="text-lg font-bold">{question.question_text}</p>
+              {questions.fields && questions.fields.length > 0 ? (
+                questions.fields.map((question) => (
+                  <div key={question.question_id} className="mt-3">
+                    <p className="text-lg font-bold">{question.question_text}</p>
 
-                  {question.question_type === "text" && (
-                    <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" />
-                  )}
-                  {question.question_type === "radio" &&
-                    question.options.map((opt) => (
-                      <label key={opt} className="block">
-                        <input type="radio" name={question.question_id} value={opt} className="mr-2" /> {opt}
-                      </label>
-                    ))}
-                  {question.question_type === "checkbox" &&
-                    question.options.map((opt) => (
-                      <label key={opt} className="block">
-                        <input type="checkbox" value={opt} className="mr-2" /> {opt}
-                      </label>
-                    ))}
-                  {question.question_type === "file" && <input type="file" className="w-full p-2 border border-gray-300 rounded-lg" />}
-                </div>
-              ))}
+                    {question.question_type === "text" && (
+                      <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" />
+                    )}
+                    {question.question_type === "radio" &&
+                      question.options && question.options.map((opt) => (
+                        <label key={opt} className="block">
+                          <input type="radio" name={question.question_id} value={opt} className="mr-2" /> {opt}
+                        </label>
+                      ))}
+                    {question.question_type === "checkbox" &&
+                      question.options && question.options.map((opt) => (
+                        <label key={opt} className="block">
+                          <input type="checkbox" value={opt} className="mr-2" /> {opt}
+                        </label>
+                      ))}
+                    {question.question_type === "file" && <input type="file" className="w-full p-2 border border-gray-300 rounded-lg" />}
+                  </div>
+                ))
+              ) : (
+                <p>No questions available for this form.</p>
+              )}
 
               <button
                 type="button"
                 onClick={handleShare}
                 className="w-full py-3 mt-6 bg-blue-500 text-white text-lg rounded-lg hover:bg-blue-600 transition"
+                disabled={loading}
               >
                 Share
               </button>
