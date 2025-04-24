@@ -104,8 +104,8 @@ function InterviewerProfile() {
             Interviewer Profile
           </h2>
 
-          {error && <div className="text-red-600 mb-3 font-medium">{error}</div>}
-          {success && <div className="text-green-600 mb-3 font-medium">{success}</div>}
+          {error && <div data-cy="error-message" className="text-red-600 mb-3 font-medium">{error}</div>}
+          {success && <div data-cy="success-message" className="text-green-600 mb-3 font-medium">{success}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -117,6 +117,7 @@ function InterviewerProfile() {
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
                 required
+                data-cy="job-title-input"
               />
             </div>
 
@@ -132,6 +133,7 @@ function InterviewerProfile() {
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
                 required
                 min={0}
+                data-cy="years-of-experience-input"
               />
             </div>
 
@@ -146,6 +148,7 @@ function InterviewerProfile() {
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
                 required
+                data-cy="areas-of-expertise-input"
               />
             </div>
 
@@ -157,6 +160,7 @@ function InterviewerProfile() {
                 value={form.phone_number}
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring focus:ring-blue-200"
+                data-cy="phone-number-input"
               />
             </div>
 
@@ -165,6 +169,7 @@ function InterviewerProfile() {
                 type="submit"
                 disabled={saving}
                 className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition disabled:opacity-60"
+                data-cy="save-profile-button"
               >
                 {saving ? "Saving..." : "Save Profile"}
               </button>
@@ -173,6 +178,7 @@ function InterviewerProfile() {
                 type="button"
                 onClick={() => navigate("/interviewer-dashboard")}
                 className="bg-gray-500 text-white py-2 px-6 rounded-lg hover:bg-gray-600 transition"
+                data-cy="cancel-button"
               >
                 Cancel
               </button>

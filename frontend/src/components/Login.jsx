@@ -93,6 +93,7 @@ export function Login() {
           <div className="form-group">
             <input
               id="email"
+              data-cy="email"
               className="form-control"
               type="email"
               placeholder="Enter your email"
@@ -104,6 +105,7 @@ export function Login() {
           <div className="form-group">
             <input
               id="password"
+              data-cy="password"
               className="form-control"
               type="password"
               placeholder="Enter your password"
@@ -114,6 +116,7 @@ export function Login() {
           </div>
           <button
             type="submit"
+            data-cy="login-button"
             className="auth-button btn-block my-2"
             style={{ width: "100%" }}
             disabled={loading}

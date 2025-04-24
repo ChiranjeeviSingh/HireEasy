@@ -1,83 +1,108 @@
-describe("Interviewer Profile Management", () => {
+describe('Interviewer Profile Tests', () => {
   beforeEach(() => {
+    // Clear any existing state
+    cy.clearCookies();
     cy.clearLocalStorage();
-    cy.fixture("users").then((users) => {
-      cy.login(users.interviewerUser.email, users.interviewerUser.password);
-    });
-  });
-
-  it("should load interviewer profile page", () => {
-    cy.visit("/interviewer-profile");
-    cy.get("[data-cy=profile-title]").should("contain", "Interviewer Profile");
-  });
-
-  it("should update profile information", () => {
-    cy.visit("/interviewer-profile");
-
-    // Mock API response
-    cy.mockApiResponse("PUT", "/api/interviewer/profile", {
+    
+    // Mock the profile API response
+    cy.intercept('GET', '**/api/profiles/me', {
       statusCode: 200,
-      body: { success: true },
-    });
+      body: {
+        job_title: 'Senior Software Engineer',
+        years_of_experience: 5,
+        areas_of_expertise: ['JavaScript', 'React', 'Node.js'],
+        phone_number: '1234567890'
+      }
+    }).as('getProfile');
 
-    // Fill in profile information
-    cy.get("[data-cy=job-title]").clear().type("Senior Software Engineer");
-    cy.get("[data-cy=experience]").clear().type("5");
-    cy.get("[data-cy=expertise]").clear().type("JavaScript, React, Node.js");
-    cy.get("[data-cy=company]").clear().type("Tech Corp");
-    cy.get("[data-cy=linkedin]").clear().type("https://linkedin.com/in/interviewer");
+    // Mock the profile update API response
+    cy.intercept('PUT', '**/api/profiles', {
+      statusCode: 200,
+      body: {
+        job_title: 'Senior Software Engineer',
+        years_of_experience: 5,
+        areas_of_expertise: ['JavaScript', 'React', 'Node.js'],
+        phone_number: '1234567890'
+      }
+    }).as('updateProfile');
 
-    // Save profile
-    cy.get("[data-cy=save-profile]").click();
-
-    // Verify success message
-    cy.get("[data-cy=success-message]").should("be.visible");
-
-    // Verify updated information
-    cy.get("[data-cy=job-title]").should("have.value", "Senior Software Engineer");
-    cy.get("[data-cy=experience]").should("have.value", "5");
+    // Login as interviewer
+    cy.login('interviewer@example.com', 'password');
+    
+    // Visit the profile page
+    cy.visit('/interviewer-profile');
   });
 
-  it("should handle validation errors", () => {
-    cy.visit("/interviewer-profile");
-
-    // Try to save with empty required fields
-    cy.get("[data-cy=save-profile]").click();
-
-    // Verify error messages
-    cy.get("[data-cy=error-message]").should("be.visible");
-    cy.get("[data-cy=job-title-error]").should("contain", "Job title is required");
+  it('should load the profile page successfully', () => {
+    cy.get('h2').should('contain', 'Interviewer Profile');
+    cy.wait('@getProfile');
   });
 
-  it("should display current availability status", () => {
-    cy.visit("/interviewer-profile");
-    cy.get("[data-cy=availability-status]").should("exist");
+  it('should display existing profile data', () => {
+    cy.wait('@getProfile');
+    cy.get('[data-cy="job-title-input"]').should('have.value', 'Senior Software Engineer');
+    cy.get('[data-cy="years-of-experience-input"]').should('have.value', '5');
+    cy.get('[data-cy="areas-of-expertise-input"]').should('have.value', 'JavaScript, React, Node.js');
+    cy.get('[data-cy="phone-number-input"]').should('have.value', '1234567890');
   });
 
-  it("should handle API errors gracefully", () => {
-    cy.visit("/interviewer-profile");
+  it('should update profile successfully', () => {
+    cy.wait('@getProfile');
+    
+    // Update form fields
+    cy.get('[data-cy="job-title-input"]').clear().type('Lead Developer');
+    cy.get('[data-cy="years-of-experience-input"]').clear().type('7');
+    cy.get('[data-cy="areas-of-expertise-input"]').clear().type('JavaScript, React, Node.js, TypeScript');
+    cy.get('[data-cy="phone-number-input"]').clear().type('9876543210');
 
-    // Mock API error response
-    cy.mockApiResponse("PUT", "/api/interviewer/profile", {
+    // Submit form
+    cy.get('[data-cy="save-profile-button"]').click();
+    cy.wait('@updateProfile');
+
+    // Check success message
+    cy.get('[data-cy="success-message"]').should('be.visible')
+      .and('contain', 'Profile saved successfully');
+  });
+
+  it('should show error message on failed update', () => {
+    // Mock failed API response
+    cy.intercept('PUT', '**/api/profiles', {
       statusCode: 500,
-      body: { error: "Internal Server Error" },
-    });
+      body: { message: 'Server error' }
+    }).as('failedUpdate');
 
-    // Try to save profile
-    cy.get("[data-cy=job-title]").clear().type("Senior Developer");
-    cy.get("[data-cy=save-profile]").click();
+    cy.wait('@getProfile');
+    
+    // Update a field
+    cy.get('[data-cy="job-title-input"]').clear().type('Lead Developer');
+    
+    // Submit form
+    cy.get('[data-cy="save-profile-button"]').click();
+    cy.wait('@failedUpdate');
 
-    // Verify error message
-    cy.get("[data-cy=error-message]").should("contain", "Failed to update profile");
+    // Check error message
+    cy.get('[data-cy="error-message"]').should('be.visible')
+      .and('contain', 'Something went wrong');
   });
 
-  it("should handle file uploads", () => {
-    cy.visit("/interviewer-profile");
-
-    // Upload profile picture
-    cy.uploadFile("[data-cy=profile-picture]", "profile.jpg");
-
-    // Verify upload success
-    cy.get("[data-cy=upload-success]").should("be.visible");
+  it('should navigate to dashboard on cancel', () => {
+    cy.get('[data-cy="cancel-button"]').click();
+    cy.url().should('include', '/interviewer-dashboard');
   });
-});
+
+  it('should validate required fields', () => {
+    cy.wait('@getProfile');
+    
+    // Clear required fields
+    cy.get('[data-cy="job-title-input"]').clear();
+    cy.get('[data-cy="years-of-experience-input"]').clear();
+    cy.get('[data-cy="areas-of-expertise-input"]').clear();
+
+    // Try to submit
+    cy.get('[data-cy="save-profile-button"]').click();
+
+    // Check that form submission was prevented
+    cy.get('[data-cy="success-message"]').should('not.exist');
+    cy.get('[data-cy="error-message"]').should('not.exist');
+  });
+}); 

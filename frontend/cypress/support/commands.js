@@ -1,5 +1,3 @@
-import "./commands";
-
 // Custom command for login
 Cypress.Commands.add("login", (email, password) => {
   // Mock login API response
@@ -14,7 +12,7 @@ Cypress.Commands.add("login", (email, password) => {
     },
   }).as("loginRequest");
 
-  cy.visit("/login");
+  cy.visit("/");
   cy.get("[data-cy=email]").should("be.visible").type(email);
   cy.get("[data-cy=password]").should("be.visible").type(password);
   cy.get("[data-cy=login-button]").should("be.visible").click();
@@ -82,19 +80,4 @@ Cypress.Commands.add("getFutureDate", (daysAhead = 1) => {
 // Custom command for handling time slots
 Cypress.Commands.add("getTimeSlot", (hours = 14, minutes = 0) => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-});
-
-// Global error handling
-Cypress.on("uncaught:exception", (err, runnable) => {
-  console.error("Uncaught exception:", err);
-  return false;
-});
-
-// Log all commands
-Cypress.on("command:start", (command) => {
-  console.log(`Command started: ${command.name}`);
-});
-
-Cypress.on("command:end", (command) => {
-  console.log(`Command ended: ${command.name}`);
-});
+}); 
