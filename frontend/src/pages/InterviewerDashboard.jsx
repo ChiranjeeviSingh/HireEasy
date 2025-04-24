@@ -18,15 +18,15 @@ export function InterviewerDashboard() {
           flexWrap: "wrap", // Ensures responsiveness
         }}
       >
-        <button onClick={() => navigate("/edit-profile")} style={buttonStyle}>
+        <button onClick={() => navigate("/interviewer-profile")} style={buttonStyle}>
           Edit Profile
         </button>
 
-        <button onClick={() => navigate("/calendar")} style={buttonStyle}>
+        <button onClick={() => navigate("/interviewer-calendar")} style={buttonStyle}>
           Calendar
         </button>
 
-        <button onClick={() => navigate("/interviews")} style={buttonStyle}>
+        <button onClick={() => navigate("/interviewer-interviews")} style={buttonStyle}>
           Interview
         </button>
       </div>

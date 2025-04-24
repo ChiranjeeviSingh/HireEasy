@@ -4,10 +4,11 @@ import (
 	"backend/internal/database"
 	"backend/internal/models"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
-	"database/sql"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -230,7 +231,8 @@ func SubmitFeedback(ctx context.Context, req *models.FeedbackRequest, interviewI
 	if err != nil {
 		return err
 	}
-	if role != "INTERVIEWER" {
+	fmt.Println("User role from database:", role)
+	if role != "Interviewer" {
 		return ErrUnauthorizedFeedback
 	}
 

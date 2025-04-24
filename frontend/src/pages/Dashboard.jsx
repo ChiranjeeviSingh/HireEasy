@@ -15,7 +15,7 @@ export function Dashboard() {
           justifyContent: "center",
           gap: "20px",
           marginTop: "30px",
-          flexWrap: "wrap", // Ensures responsiveness
+          flexWrap: "wrap",
         }}
       >
         <button onClick={() => navigate("/job-posting")} style={buttonStyle}>
@@ -30,15 +30,17 @@ export function Dashboard() {
           Share Job
         </button>
 
-        <button
-          onClick={() => navigate("/job-applications")}
-          style={buttonStyle}
-        >
+        <button onClick={() => navigate("/job-applications")} style={buttonStyle}>
           View Job Applications
         </button>
 
         <button onClick={() => navigate("/view-jobs")} style={buttonStyle}>
           View Jobs
+        </button>
+
+        {/* 🆕 Schedule Interviews */}
+        <button onClick={() => navigate("/schedule-interviews")} style={buttonStyle}>
+          Schedule Interviews
         </button>
       </div>
     </div>
@@ -55,12 +57,7 @@ const buttonStyle = {
   borderRadius: "8px",
   cursor: "pointer",
   transition: "background 0.3s",
-  minWidth: "200px", // Ensures buttons are uniform in size
-};
-
-// Hover effect
-buttonStyle[":hover"] = {
-  backgroundColor: "#0056b3",
+  minWidth: "200px",
 };
 
 export default Dashboard;

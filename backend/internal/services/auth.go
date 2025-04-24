@@ -1,14 +1,15 @@
 package services
 
 import (
-    "context"
-    "errors"
-    "time"
-    "github.com/golang-jwt/jwt/v4"
-    "golang.org/x/crypto/bcrypt"
-    "backend/internal/database"
-    "backend/internal/config"
-    "backend/internal/models"
+	"backend/internal/config"
+	"backend/internal/database"
+	"backend/internal/models"
+	"context"
+	"errors"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -86,7 +87,7 @@ func Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error) {
     db := database.GetDB()
 
     err := db.GetContext(ctx, &user,
-        `SELECT id, email, password_hash, username 
+        `SELECT id, email, password_hash, username, role 
          FROM users 
          WHERE email = $1`, req.Email)
     if err != nil {
@@ -110,6 +111,7 @@ func Login(ctx context.Context, req *LoginRequest) (*AuthResponse, error) {
         User: models.User {
             Username: user.Username,
             Email: req.Email,
+            Role: user.Role,
         },
     }, nil
 }

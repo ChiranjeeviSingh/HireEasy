@@ -57,9 +57,9 @@ func LoadConfig() error {
 		DBConfig: postgresConfig{
 			Host:     getEnvOrDefault("DB_HOST", "localhost"),
 			Port:     getEnvOrDefault("DB_PORT", "5432"),
-			Username: getEnvOrDefault("DB_USER", "reshma"),
-			Password: getEnvOrDefault("DB_PASSWORD", "postgres"),
-			Dbname:   getEnvOrDefault("DB_NAME", "app_db"),
+			Username: getEnvOrDefault("DB_USER", "postgres"),
+			Password: getEnvOrDefault("DB_PASSWORD", "123456"),
+			Dbname:   getEnvOrDefault("DB_NAME", "go_db"),
 		},
 	}
 

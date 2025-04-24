@@ -12,6 +12,8 @@ import ViewJobs from "./components/ViewJobs.jsx"; // New import
 import Register from "./components/Register.jsx";
 import Apply from './components/Apply';  // Adjust the path to where Apply.jsx is located
 import InterviewerDashboard from "./pages/InterviewerDashboard.jsx";
+import ScheduleInterviews from "./components/ScheduleInterviews.jsx";
+import InterviewerInterviews from "./components/InterviewerInterviews.jsx";
 
 console.log("App.jsx is rendering...");
 
@@ -31,6 +33,8 @@ export function App() {
         <Route path="/apply" element={<Apply />} />
         <Route path="/interviewer-profile" element={<InterviewerProfile />} />
         <Route path="/interviewer-calendar" element={<InterviewerCalendar />} />
+        <Route path="/schedule-interviews" element={<ScheduleInterviews />} />
+        <Route path="/interviewer-interviews" element={<InterviewerInterviews />} />
       </Routes>
     </div>
   );

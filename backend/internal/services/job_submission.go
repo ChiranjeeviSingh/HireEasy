@@ -10,6 +10,7 @@ import (
 	"backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding" // ✅ Added for explicit form binding
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 )
@@ -29,16 +30,22 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 	}
 
 	var submission models.FormSubmissionRequest
-	
-	// Parse multipart form
-	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
-		log.Printf("Failed to parse multipart form: %v", err)
-		return nil, fmt.Errorf("failed to parse form: %v", err)
-	}
 
-	// Bind form data
-	if err := c.ShouldBind(&submission); err != nil {
-		log.Printf("Failed to bind form data: %v", err)
+	// ❌ Commenting out original form parsing
+	// if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+	// 	log.Printf("Failed to parse multipart form: %v", err)
+	// 	return nil, fmt.Errorf("failed to parse form: %v", err)
+	// }
+
+	// ❌ Commenting out original binding
+	// if err := c.ShouldBind(&submission); err != nil {
+	// 	log.Printf("Failed to bind form data: %v", err)
+	// 	return nil, fmt.Errorf("invalid form data: %v", err)
+	// }
+
+	// ✅ Replaced with correct multipart binding
+	if err := c.ShouldBindWith(&submission, binding.FormMultipart); err != nil {
+		log.Printf("Failed to bind form data (multipart): %v", err)
 		return nil, fmt.Errorf("invalid form data: %v", err)
 	}
 
@@ -51,7 +58,7 @@ func (s *FormSubmissionService) HandleFormSubmission(c *gin.Context) (*models.Jo
 
 	// Extract skills from form data
 	var skills []string
-	if skillsInterface, ok := formDataMap["skills"].([]interface{}); ok {
+	if skillsInterface, ok := formDataMap["Q_Skills"].([]interface{}); ok {
 		for _, skill := range skillsInterface {
 			if skillStr, ok := skill.(string); ok {
 				skills = append(skills, skillStr)
@@ -126,7 +133,7 @@ func (s *FormSubmissionService) insertJobSubmission(submission *models.JobSubmis
 		// Continue anyway, we'll try the insert
 	} else {
 		defer tableInfo.Close()
-		
+
 		var columns []string
 		for tableInfo.Next() {
 			var name, dataType, nullable string
@@ -142,7 +149,7 @@ func (s *FormSubmissionService) insertJobSubmission(submission *models.JobSubmis
 			form_uuid, job_id, username, email, form_data, skills, resume_url, ats_score, status, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id`
-	
+
 	args := []interface{}{
 		submission.FormUUID,
 		submission.JobID,
@@ -171,7 +178,7 @@ func calculateATSScore(skills []string) int {
 	// Simple scoring logic based on number of skills
 	baseScore := 70
 	skillPoints := len(skills) * 5
-	
+
 	score := baseScore + skillPoints
 	if score > 100 {
 		score = 100
@@ -187,13 +194,13 @@ func (s *FormSubmissionService) checkJobSubmissionsTable() error {
 		WHERE table_name = 'job_submissions'
 		ORDER BY ordinal_position;
 	`
-	
+
 	rows, err := s.db.Query(query)
 	if err != nil {
 		return fmt.Errorf("failed to query table schema: %v", err)
 	}
 	defer rows.Close()
-	
+
 	var columns []string
 	for rows.Next() {
 		var col string
@@ -202,7 +209,7 @@ func (s *FormSubmissionService) checkJobSubmissionsTable() error {
 		}
 		columns = append(columns, col)
 	}
-	
+
 	log.Printf("Job submissions table columns: %v", columns)
 	return nil
 }

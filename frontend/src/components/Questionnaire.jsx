@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function Questionnaire() {
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
 
   // Initial state: Questions & their options
   const initialState = {
@@ -27,34 +27,35 @@ export function Questionnaire() {
         type: "text",
         options: [],
       },
-      { id: "Q_Resume", text: "Upload your resume", type: "file", options: [] },
+      {
+        id: "Q_Resume",
+        text: "Upload your resume",
+        type: "file",
+        options: [],
+      },
       {
         id: "Q6",
         text: "What is your expected salary?",
         type: "text",
         options: [],
       },
-      { id: "Q7", text: "", type: "text", options: [] },
-      { id: "Q8", text: "", type: "text", options: [] },
-      { id: "Q9", text: "", type: "text", options: [] },
-      { id: "Q10", text: "", type: "text", options: [] },
     ],
   };
 
   const [formData, setFormData] = useState(initialState);
+  const [additionalQuestions, setAdditionalQuestions] = useState([]);
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
-  // Handle input changes (Question text or options)
+  // Handle input changes for predefined questions
   const handleChange = (e, index, isOption = false, optionIndex = null) => {
     const updatedQuestions = [...formData.Questions];
 
     if (isOption) {
-      // Update specific option for a question
       updatedQuestions[index].options[optionIndex] = e.target.value;
     } else {
       updatedQuestions[index].text = e.target.value;
@@ -63,42 +64,87 @@ export function Questionnaire() {
     setFormData({ ...formData, Questions: updatedQuestions });
   };
 
-  // Add new option for multiple-choice questions
-  const addOption = (index) => {
-    const updatedQuestions = [...formData.Questions];
-    updatedQuestions[index].options.push("");
-    setFormData({ ...formData, Questions: updatedQuestions });
+  // Handle input changes for additional questions (Q7-Q10)
+  const handleAdditionalChange = (e, index, isOption = false, optionIndex = null) => {
+    const updatedQuestions = [...additionalQuestions];
+
+    if (isOption) {
+      updatedQuestions[index].options[optionIndex] = e.target.value;
+    } else {
+      updatedQuestions[index].text = e.target.value;
+    }
+
+    setAdditionalQuestions(updatedQuestions);
   };
 
-  // Handle form submission (integration with backend)
+  // Add new option for multiple-choice questions
+  const addOption = (index, isAdditional = false) => {
+    if (isAdditional) {
+      const updatedQuestions = [...additionalQuestions];
+      updatedQuestions[index].options.push("");
+      setAdditionalQuestions(updatedQuestions);
+    } else {
+      const updatedQuestions = [...formData.Questions];
+      updatedQuestions[index].options.push("");
+      setFormData({ ...formData, Questions: updatedQuestions });
+    }
+  };
+
+  // Add new question (Q7-Q10)
+  const addQuestion = () => {
+    if (additionalQuestions.length < 4) {
+      const newQuestion = {
+        id: `Q${7 + additionalQuestions.length}`,
+        text: "",
+        type: "",
+        options: [],
+      };
+      setAdditionalQuestions([...additionalQuestions, newQuestion]);
+    }
+  };
+
+  // Set question type for a given additional question
+  const setQuestionType = (index, type) => {
+    const updatedQuestions = [...additionalQuestions];
+    updatedQuestions[index].type = type;
+
+    if (type === "radio" || type === "checkbox") {
+      // Provide at least one default option
+      updatedQuestions[index].options = ["Default1"];
+    } else {
+      updatedQuestions[index].options = [];
+    }
+
+    setAdditionalQuestions(updatedQuestions);
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
 
-    const token = localStorage.getItem("token"); // Get JWT token
+    const token = localStorage.getItem("token");
 
-    // Map frontend fields to backend structure (correct field names as in the backend model)
+    // Merge additional questions into main form data
+    const finalQuestions = [...formData.Questions, ...additionalQuestions];
+
+    // Map frontend fields to backend structure
     const questionnaireData = {
-      form_template_id: formData.FormID.trim(), // map to form_template_id
-      user_id: 1, // This will be the logged-in user's ID; for now, you can fetch it from localStorage or other sources
-      fields: formData.Questions.map((question) => ({
-        question_id: question.id, // unique question id
-        question_text: question.text.trim(), // question text
-        question_type: question.type, // question type (radio, checkbox, text, etc.)
-        options: question.options.map((option) => option.trim()) // options for radio/checkbox questions
+      form_template_id: formData.FormID.trim(),
+      user_id: 1,
+      fields: finalQuestions.map((question) => ({
+        question_id: question.id,
+        question_text: question.text.trim(),
+        question_type: question.type,
+        options: question.options.map((option) => option.trim()),
       })),
     };
 
-    // Log the data being sent to the backend
     console.log("Mapped Questionnaire Data:", questionnaireData);
 
-    // Check if all required fields are valid
-    if (
-      !questionnaireData.form_template_id ||
-      questionnaireData.fields.length === 0
-    ) {
+    if (!questionnaireData.form_template_id || questionnaireData.fields.length === 0) {
       setError("Please fill in all required fields.");
       setLoading(false);
       return;
@@ -109,14 +155,13 @@ export function Questionnaire() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`, // Attach JWT token for authorization
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(questionnaireData), // Send the questionnaire data
+        body: JSON.stringify(questionnaireData),
       });
 
       const data = await response.json();
-
-      console.log("Response Data:", data); // Log the response from the backend
+      console.log("Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.msg || "Failed to create questionnaire.");
@@ -124,7 +169,6 @@ export function Questionnaire() {
 
       setSuccess(`Questionnaire with Form ID "${data.form_template_id}" created successfully!`);
       setFormSubmitted(true);
-
     } catch (err) {
       setError(err.message);
     } finally {
@@ -132,119 +176,169 @@ export function Questionnaire() {
     }
   };
 
-  // Reset form for a new questionnaire
-  const handleNewQuestionnaire = () => {
-    setFormData(initialState);
-    setFormSubmitted(false);
-  };
-
   return (
-    <div
-      style={{ textAlign: "center", marginTop: "20px", position: "relative" }}
-    >
+    <div className="flex flex-col items-center min-h-screen bg-gray-100">
       {/* Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        style={{
-          position: "absolute",
-          top: "10px",
-          left: "10px",
-          padding: "5px 10px",
-          fontSize: "16px",
-          cursor: "pointer",
-        }}
+        className="absolute top-4 left-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
       >
         ⬅️ Dashboard
       </button>
 
-      <h2>Create a Job Questionnaire</h2>
+      <h2 className="text-3xl font-bold mt-12">Create a Job Questionnaire</h2>
 
-      {error && <p className="error-text" style={{ color: "red" }}>{error}</p>}
-      {success && <p className="success-text" style={{ color: "green" }}>{success}</p>}
+      {error && <p className="text-red-500 mt-3">{error}</p>}
+      {success && <p className="text-green-500 mt-3">{success}</p>}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ maxWidth: "600px", margin: "auto" }}
-      >
+      <form onSubmit={handleSubmit} className="bg-white p-6 mt-6 shadow-md rounded-lg w-full max-w-xl">
         {/* Form ID Input */}
-        <div style={{ marginBottom: "10px" }}>
-          <label>Form ID (Required): </label>
+        <div className="mb-4">
+          <label className="block font-bold">Form ID:</label>
           <input
             type="text"
             name="FormID"
             value={formData.FormID}
-            onChange={(e) =>
-              setFormData({ ...formData, FormID: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, FormID: e.target.value })}
             required
-            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+            className="w-full p-2 border border-gray-300 rounded-lg"
           />
         </div>
 
-        {/* Dynamic Question Inputs */}
+        {/* Predefined Questions */}
         {formData.Questions.map((question, index) => (
-          <div key={question.id} style={{ marginBottom: "10px" }}>
-            <label>{`Question ${index + 1}:`}</label>
+          <div key={question.id} className="mb-4">
+            <label className="block font-bold">Question Text:</label>
             <input
               type="text"
               value={question.text}
               onChange={(e) => handleChange(e, index)}
-              style={{ width: "100%", padding: "8px", fontSize: "16px" }}
+              className="w-full p-2 border border-gray-300 rounded-lg"
             />
 
-            {/* Multiple choice (radio/checkbox) options */}
+            {/* Show file input placeholder if question.type === 'file' */}
+            {question.type === "file" && (
+              <div className="mt-2">
+                <input
+                  type="file"
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-lg cursor-not-allowed"
+                />
+                <p className="text-gray-500 text-sm mt-1">
+                  (File upload will be shown to candidates)
+                </p>
+              </div>
+            )}
+
+            {/* If it's radio/checkbox, show the options */}
             {(question.type === "radio" || question.type === "checkbox") && (
-              <div>
+              <div className="mt-2">
                 {question.options.map((option, optionIndex) => (
                   <input
                     key={optionIndex}
                     type="text"
                     value={option}
                     onChange={(e) => handleChange(e, index, true, optionIndex)}
-                    placeholder={`Option ${optionIndex + 1}`}
-                    style={{ width: "80%", padding: "5px", marginTop: "5px" }}
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
                   />
                 ))}
                 <button
                   type="button"
                   onClick={() => addOption(index)}
-                  style={{ marginLeft: "5px", padding: "5px 10px" }}
+                  className="text-blue-500 mt-1"
                 >
                   ➕ Add Option
                 </button>
               </div>
             )}
+          </div>
+        ))}
 
-            {/* File Upload Notice */}
+        {/* Additional Questions (Q7-Q10) */}
+        {additionalQuestions.map((question, index) => (
+          <div key={question.id} className="mb-4">
+            {/* Question Text */}
+            <label className="block font-bold">New Question Text:</label>
+            <input
+              type="text"
+              value={question.text}
+              onChange={(e) => handleAdditionalChange(e, index)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+              placeholder="Enter question text"
+            />
+
+            {/* Question Type Select */}
+            <label className="block font-bold mt-2">Select Question Type:</label>
+            <select
+              value={question.type}
+              onChange={(e) => setQuestionType(index, e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg"
+            >
+              <option value="">Select Question Type</option>
+              <option value="text">Text</option>
+              <option value="radio">Radio</option>
+              <option value="checkbox">Checkbox</option>
+              <option value="file">File</option>
+            </select>
+
+            {/* If we want to show a disabled file input for newly added “file” questions */}
             {question.type === "file" && (
-              <p style={{ fontSize: "14px", color: "gray" }}>
-                This question requires candidates to upload a file.
-              </p>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-lg cursor-not-allowed"
+                />
+                <p className="text-gray-500 text-sm mt-1">
+                  (File upload will be shown to candidates)
+                </p>
+              </div>
+            )}
+
+            {/* Options for radio/checkbox */}
+            {(question.type === "radio" || question.type === "checkbox") && (
+              <div className="mt-2">
+                {question.options.map((option, optionIndex) => (
+                  <input
+                    key={optionIndex}
+                    type="text"
+                    value={option}
+                    onChange={(e) => handleAdditionalChange(e, index, true, optionIndex)}
+                    className="w-full p-2 border border-gray-300 rounded-lg mt-1"
+                    placeholder={`Option ${optionIndex + 1}`}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => addOption(index, true)}
+                  className="text-blue-500 mt-1"
+                >
+                  ➕ Add Option
+                </button>
+              </div>
             )}
           </div>
         ))}
 
-        {/* Submit and New Buttons */}
-        <button
-          type="submit"
-          style={{ marginTop: "10px", cursor: "pointer", padding: "10px 15px" }}
-        >
-          Submit Questionnaire
-        </button>
-
-        {formSubmitted && (
+        {/* Button to Add Additional Questions */}
+        {additionalQuestions.length < 4 && (
           <button
             type="button"
-            onClick={handleNewQuestionnaire}
-            style={{
-              marginLeft: "10px",
-              cursor: "pointer",
-              padding: "10px 15px",
-            }}
+            onClick={addQuestion}
+            className="text-green-500 mt-3"
           >
-            New
+            ➕ Add Question
           </button>
         )}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          className="w-full bg-green-500 text-white py-2 mt-4 rounded-lg"
+          disabled={loading}
+        >
+          {loading ? "Submitting..." : "Submit Questionnaire"}
+        </button>
       </form>
     </div>
   );

@@ -21,13 +21,13 @@ export function ShareJob() {
       setLoading(true);
       const response = await fetch(`${API_BASE}/jobs`, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       const data = await response.json();
       console.log("Fetched Jobs:", data);
       if (response.ok) {
-        setJobPostings(data); // Assuming the data is an array of job postings
+        setJobPostings(data || []);  // Ensure it's an array
       } else {
         setError("Failed to fetch job postings.");
       }
@@ -45,13 +45,13 @@ export function ShareJob() {
       setLoading(true);
       const response = await fetch(`${API_BASE}/forms/templates`, {
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
       const data = await response.json();
       console.log("Fetched Forms:", data);
       if (response.ok) {
-        setQuestionnaires(data); // Assuming the data is an array of form templates
+        setQuestionnaires(data || []);  // Ensure it's an array
       } else {
         setError("Failed to fetch form templates.");
       }
@@ -91,7 +91,6 @@ export function ShareJob() {
       return;
     }
 
-    // Assuming that the job has been linked to the form template
     const token = localStorage.getItem("token");
 
     try {
@@ -99,10 +98,10 @@ export function ShareJob() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          form_template_id: selectedFormId, // Sending the selected form template
+          form_template_id: selectedFormId,
         }),
       });
 
@@ -112,10 +111,8 @@ export function ShareJob() {
         throw new Error(data.msg || "Failed to link job to form.");
       }
 
-      // Assuming we get a form UUID from the backend
       const shareableLink = `https://hireeasy.com/apply?job=${selectedJobId}&form=${data.form_uuid}`;
       alert(`Share using this link:\n${shareableLink}`);
-
     } catch (err) {
       alert(err.message || "Failed to share the job.");
     }
@@ -128,137 +125,130 @@ export function ShareJob() {
   }, []);
 
   return (
-    <div style={{ textAlign: "center", marginTop: "20px", position: "relative" }}>
-      {/* Dashboard Button */}
+    <div className="relative min-h-screen flex flex-col justify-between bg-gray-100">
+      {/* ✅ Dashboard Button */}
       <button
         onClick={() => navigate("/dashboard")}
-        style={{
-          position: "absolute",
-          top: "10px",
-          left: "10px",
-          padding: "5px 10px",
-          fontSize: "16px",
-          cursor: "pointer",
-        }}
+        className="absolute top-4 left-4 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
       >
         ⬅️ Dashboard
       </button>
 
-      <h2>Share Job</h2>
+      {/* ✅ Main Card */}
+      <div className="flex-grow flex justify-center items-center">
+        <div className="bg-white shadow-lg rounded-xl p-10 w-full max-w-3xl">
+          <h2 className="text-4xl font-bold text-center text-gray-800 tracking-wide mb-8">
+            Share Job
+          </h2>
 
-      {/* Dropdowns for Job ID and Form ID */}
-      <div style={{ maxWidth: "600px", margin: "auto" }}>
-        <div style={{ marginBottom: "10px" }}>
-          <label>Select Job ID: </label>
-          <select
-            value={selectedJobId}
-            onChange={(e) => setSelectedJobId(e.target.value)}
-            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
-          >
-            <option value="">-- Select Job ID --</option>
-            {jobPostings.length > 0 ? (
-              jobPostings.map((job) => (
-                <option key={job.job_id} value={job.job_id}>
-                  {job.job_id}
-                </option>
-              ))
-            ) : (
-              <option value="">No jobs available</option>
-            )}
-          </select>
-        </div>
+          {loading && <p className="text-blue-500 text-center">Loading...</p>}
+          {error && <p className="text-red-500 text-center">{error}</p>}
 
-        <div style={{ marginBottom: "10px" }}>
-          <label>Select Form ID: </label>
-          <select
-            value={selectedFormId}
-            onChange={(e) => setSelectedFormId(e.target.value)}
-            style={{ width: "100%", padding: "8px", fontSize: "16px" }}
-          >
-            <option value="">-- Select Form ID --</option>
-            {questionnaires.length > 0 ? (
-              questionnaires.map((form) => (
-                <option key={form.form_template_id} value={form.form_template_id}>
-                  {form.form_template_id}
-                </option>
-              ))
-            ) : (
-              <option value="">No forms available</option>
-            )}
-          </select>
-        </div>
+          {/* Dropdowns for Job ID and Form ID */}
+          <div className="mb-6">
+            <label className="block font-medium mb-2 text-lg">Select Job ID:</label>
+            <select
+              value={selectedJobId}
+              onChange={(e) => setSelectedJobId(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">-- Select Job ID --</option>
+              {jobPostings && jobPostings.length > 0 ? (
+                jobPostings.map((job) => (
+                  <option key={job.job_id} value={job.job_id}>
+                    {job.job_id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No jobs available</option>
+              )}
+            </select>
+          </div>
 
-        <button
-          onClick={fetchJobAndFormData}
-          style={{ cursor: "pointer", padding: "10px 15px", marginTop: "10px" }}
-        >
-          Generate Job Application
-        </button>
-      </div>
+          <div className="mb-6">
+            <label className="block font-medium mb-2 text-lg">Select Form ID:</label>
+            <select
+              value={selectedFormId}
+              onChange={(e) => setSelectedFormId(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="">-- Select Form ID --</option>
+              {questionnaires && questionnaires.length > 0 ? (
+                questionnaires.map((form) => (
+                  <option key={form.form_template_id} value={form.form_template_id}>
+                    {form.form_template_id}
+                  </option>
+                ))
+              ) : (
+                <option value="">No forms available</option>
+              )}
+            </select>
+          </div>
 
-      {/* Display Job Details and Questionnaire */}
-      {jobDetails && questions && (
-        <div
-          style={{
-            maxWidth: "600px",
-            margin: "auto",
-            marginTop: "20px",
-            textAlign: "left",
-          }}
-        >
-          <h3>Job Details</h3>
-          <p>
-            <strong>Job ID:</strong> {jobDetails.job_id}
-          </p>
-
-          {/* Display all job details dynamically */}
-          {Object.keys(jobDetails)
-            .filter((key) => key !== "job_id") // Exclude JobID as it's already displayed
-            .map((key, index) => (
-              <p key={index}>
-                <strong>{key.replace("Info", "Detail ")}:</strong>{" "}
-                {jobDetails[key]}
-              </p>
-            ))}
-
-          <h3>Job Questionnaire</h3>
-          {questions.fields.map((question) => (
-            <div key={question.question_id} style={{ marginBottom: "10px" }}>
-              <p>
-                <strong>{question.question_text}</strong>
-              </p>
-
-              {question.question_type === "text" && <input type="text" />}
-              {question.question_type === "radio" &&
-                question.options.map((opt) => (
-                  <label key={opt}>
-                    <input type="radio" name={question.question_id} value={opt} /> {opt}
-                  </label>
-                ))}
-              {question.question_type === "checkbox" &&
-                question.options.map((opt) => (
-                  <label key={opt}>
-                    <input type="checkbox" value={opt} /> {opt}
-                  </label>
-                ))}
-              {question.question_type === "file" && <input type="file" />}
-            </div>
-          ))}
-
-          {/* Share Button */}
           <button
-            type="button"
-            onClick={handleShare}
-            style={{
-              marginTop: "10px",
-              cursor: "pointer",
-              padding: "10px 15px",
-            }}
+            onClick={fetchJobAndFormData}
+            className="w-full py-3 bg-green-500 text-white text-lg rounded-lg hover:bg-green-600 transition"
+            disabled={loading}
           >
-            Share
+            Generate Job Application
           </button>
+
+          {/* Display Job Details and Questionnaire */}
+          {jobDetails && questions && (
+            <div className="mt-6">
+              <h3 className="text-2xl font-semibold">Job Details</h3>
+              <p className="text-lg">
+                <strong>Job ID:</strong> {jobDetails.job_id}
+              </p>
+
+              {Object.keys(jobDetails)
+                .filter((key) => key !== "job_id")
+                .map((key, index) => (
+                  <p key={index} className="text-lg">
+                    <strong>{key.replace("Info", "Detail")}:</strong> {jobDetails[key]}
+                  </p>
+                ))}
+
+              <h3 className="text-2xl font-semibold mt-6">Job Questionnaire</h3>
+              {questions.fields && questions.fields.length > 0 ? (
+                questions.fields.map((question) => (
+                  <div key={question.question_id} className="mt-3">
+                    <p className="text-lg font-bold">{question.question_text}</p>
+
+                    {question.question_type === "text" && (
+                      <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" />
+                    )}
+                    {question.question_type === "radio" &&
+                      question.options && question.options.map((opt) => (
+                        <label key={opt} className="block">
+                          <input type="radio" name={question.question_id} value={opt} className="mr-2" /> {opt}
+                        </label>
+                      ))}
+                    {question.question_type === "checkbox" &&
+                      question.options && question.options.map((opt) => (
+                        <label key={opt} className="block">
+                          <input type="checkbox" value={opt} className="mr-2" /> {opt}
+                        </label>
+                      ))}
+                    {question.question_type === "file" && <input type="file" className="w-full p-2 border border-gray-300 rounded-lg" />}
+                  </div>
+                ))
+              ) : (
+                <p>No questions available for this form.</p>
+              )}
+
+              <button
+                type="button"
+                onClick={handleShare}
+                className="w-full py-3 mt-6 bg-blue-500 text-white text-lg rounded-lg hover:bg-blue-600 transition"
+                disabled={loading}
+              >
+                Share
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

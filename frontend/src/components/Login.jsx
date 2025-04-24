@@ -29,17 +29,30 @@ export function Login() {
       });
 
       const data = await response.json();
-      console.log("Response Data:", data); // Log the entire response data
+      console.log("Response Data:", data);
 
       if (!response.ok) {
         throw new Error(data.msg || "Invalid credentials, please try again.");
       }
 
-      // Store the correct token (from the nested token object)
-      localStorage.setItem("token", data.token.token); // Corrected token storage
+      const token = data.token.token;
+      const user = data.token.user;
+
+      // Save token and role
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("username", user.username);
 
       alert("Login Successful!");
-      navigate("/dashboard");
+
+      // Redirect based on role
+      if (user.role === "HR") {
+        navigate("/dashboard");
+      } else if (user.role === "Interviewer") {
+        navigate("/interviewer-dashboard");
+      } else {
+        setError("Unknown user role. Please contact support.");
+      }
 
     } catch (err) {
       setError(err.message);
@@ -80,6 +93,7 @@ export function Login() {
           <div className="form-group">
             <input
               id="email"
+              data-cy="email"
               className="form-control"
               type="email"
               placeholder="Enter your email"
@@ -91,6 +105,7 @@ export function Login() {
           <div className="form-group">
             <input
               id="password"
+              data-cy="password"
               className="form-control"
               type="password"
               placeholder="Enter your password"
@@ -101,6 +116,7 @@ export function Login() {
           </div>
           <button
             type="submit"
+            data-cy="login-button"
             className="auth-button btn-block my-2"
             style={{ width: "100%" }}
             disabled={loading}
