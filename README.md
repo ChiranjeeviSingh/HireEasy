@@ -1,466 +1,384 @@
-# Sprint 4 Documentation
-
-## Overview
-
-HireEasy is a comprehensive hiring platform that streamlines the recruitment process through automated job posting, candidate screening, and interview management. This sprint focuses on the interviewer workflow and job application management system.
-
-## Tasks Completed in Sprint 4
-
-### Functionality Added in This Sprint - Backend
-
-#### Interview Management Routes (Reshma)
-
-The following API endpoints have been implemented for managing interviews:
-
-- **POST /interviews** - Creates a new interview by reserving an availability slot (HR action)
-
-  - Validates availability exists and is not already booked
-  - Links interview to job submission and interviewer
-  - Returns interview details including scheduled time
-
-- **DELETE /interviews/:id** - Cancels an existing interview booking (HR action)
-
-  - Validates interview exists and belongs to HR's company
-  - Frees up the availability slot
-  - Returns success confirmation
-
-- **GET /interviews** - Lists all interviews with filtering options
-
-  - For HR users: Shows all interviews they have schedules across interviewers in the company. Also includes feedback and verdict provided by interviewer post interview.
-  - For Interviewers: Shows only their assigned interviews
-  - Supports filtering by:
-    - Candidate's job submission ID
-    - Date range
-    - Interview status
-  - Returns interviews with candidate and scheduling details
-
-- **POST /interviews/:id/feedback** - Submits feedback for completed interview (Interviewer action)
-  - Validates interview exists and interviewer was assigned
-  - Stores detailed feedback and updates interview status
-  - Returns success confirmation
-
-### Interview Management Tests
-
-<table>
-<tr>
-<th>Test Case</th>
-<th>Description</th>
-<th>Scenarios Covered</th>
-<th>Expected Outcome</th>
-</tr>
-
-<tr>
-<td><code>TestCreateInterview</code></td>
-<td>Tests interview creation process with various inputs</td>
-<td>
-- Missing required fields<br>
-- Invalid job_id<br>
-- Valid request with all fields
-</td>
-<td>
-- HTTP 400 for missing fields<br>
-- HTTP 400 for invalid job_id<br>
-- HTTP 201 with interview details for valid request<br>
-- Validates job_id, hr_user_id, status fields
-</td>
-</tr>
-
-<tr>
-<td><code>TestDeleteInterviewH</code></td>
-<td>Tests interview deletion functionality</td>
-<td>
-- Non-existent interview ID<br>
-- Valid interview deletion
-</td>
-<td>
-- HTTP 400 for non-existent ID<br>
-- HTTP 200 for successful deletion<br>
-- Verifies interview removal from database
-</td>
-</tr>
-
-<tr>
-<td><code>TestSubmitFeedbackH</code></td>
-<td>Tests interview feedback submission</td>
-<td>
-- Non-existent interview ID<br>
-- Valid feedback submission with verdict and comments
-</td>
-<td>
-- HTTP 400 for non-existent interview<br>
-- HTTP 200 for valid submission<br>
-- Verifies status update to "completed"<br>
-- Verifies feedback storage
-</td>
-</tr>
-
-<tr>
-<td><code>TestListAllInterviewsH</code></td>
-<td>Tests interview listing with different filters and roles</td>
-<td>
-- List all interviews for HR<br>
-- Filter by job_submission_id<br>
-- Filter by date range<br>
-- List interviews for specific interviewer<br>
-- Status checks for past/future interviews
-</td>
-<td>
-- Returns correct number of interviews<br>
-- Filters applied correctly<br>
-- Past interviews marked as "pending_feedback"<br>
-- Future interviews marked as "scheduled"<br>
-- Role-based access control
-</td>
-</tr>
-</table>
-
-#### Test Setup Details
-
-- Uses embedded test database
-- Creates test users (HR and Interviewers)
-- Sets up test jobs, submissions, and availabilities
-- Handles proper test data cleanup
-
-Run tests with:
-
-```bash
-go test -v HireEasy/backend/test/handlers/interview_test.go
-```
-
-### Job Submission Status Updates (Sushmita)
-
-#### Status Management
-
-#### 1. Update Submission Status
-
-```
-PUT /api/submissions/:submission_id/status
-```
-
-Update a submission's status with:
-
-```json
-{
-  "status": "under_review" // Options: applied, under_review, accepted, rejected
-}
-```
-
-#### 2. Filter Submissions by Status
-
-```
-GET /api/jobs/:job_id/submissions?status=under_review
-```
-
-Query parameter:
-
-- `status`: Filter submissions by status (applied, under_review, accepted, rejected)
-
-### Test Coverage
-
-We've added comprehensive tests for:
-
-1. Status Updates
-   - Successfully updating status
-   - Invalid status values
-   - Non-existent submissions
-2. Status Filtering
-   - Filtering by valid status
-   - Invalid status parameters
-   - Empty results for non-matching status
-
-Run tests with:
-
-```bash
-go test -v ./internal/api/handlers/job_submission_test.go
-```
-
-### Functionality Added in This Sprint - Frontend
-
-#### Core Components
-
-##### 1. Interviewer Workflow Components
-
-###### InterviewerProfile
-
-- **Purpose**: Manages interviewer professional information
-- **Features**:
-  - Profile creation and updates
-  - Job title and experience management
-  - Areas of expertise specification
-  - Contact information management
-- **Key Functions**:
-  - Profile data persistence
-  - Form validation
-  - Real-time updates
-
-###### InterviewerCalendar
-
-- **Purpose**: Manages interviewer availability
-- **Features**:
-  - Time slot management (13:00-18:00)
-  - 7-day availability view
-  - Slot creation and deletion
-- **Key Functions**:
-  - Availability scheduling
-  - Conflict prevention
-  - Real-time updates
-
-###### InterviewerInterviews
-
-- **Purpose**: Manages scheduled interviews
-- **Features**:
-  - Interview scheduling
-  - Candidate feedback system
-  - Status updates
-  - Interview details view
-- **Key Functions**:
-  - Feedback submission
-  - Candidate selection/rejection
-  - Interview status tracking
-
-##### 2. Job Application Management
-
-###### JobApplications
-
-- **Purpose**: Manages job applications and candidate screening
-- **Features**:
-  - Application status tracking
-  - Candidate filtering
-  - ATS score integration
-  - Resume management
-- **Key Functions**:
-  - Status updates
-  - Candidate shortlisting
-  - Application review
-
-###### ScheduleInterviews
-
-- **Purpose**: Coordinates interview scheduling
-- **Features**:
-  - Interview slot management
-  - Candidate selection
-  - Interviewer assignment
-  - Status tracking
-- **Key Functions**:
-  - Interview scheduling
-  - Status updates
-  - Conflict resolution
-
-#### Added Functionalities
-
-##### InterviewerProfile.jsx
-
-- **New Features**:
-  - Professional profile creation and management
-  - Expertise area tagging system
-  - Experience tracking
-  - Contact information management
-- **Integration Points**:
-  - Connects with backend profile API
-  - Updates interviewer availability preferences
-  - Links with interview scheduling system
-
-##### InterviewerCalendar.jsx
-
-- **New Features**:
-  - Interactive calendar interface
-  - Time slot management (13:00-18:00)
-  - 7-day availability view
-  - Conflict detection
-- **Integration Points**:
-  - Syncs with backend availability API
-  - Integrates with interview scheduling
-  - Real-time updates for booked slots
-
-##### InterviewerInterviews.jsx
-
-- **New Features**:
-  - Interview dashboard
-  - Feedback submission system
-  - Candidate evaluation interface
-  - Status tracking
-- **Integration Points**:
-  - Connects with interview management API
-  - Links with candidate profiles
-  - Updates job submission status
-
-##### JobApplications.jsx
-
-- **New Features**:
-  - Application tracking dashboard
-  - ATS score visualization
-  - Candidate filtering system
-  - Status management
-- **Integration Points**:
-  - Job submission API
-  - Candidate profile system
-  - Interview scheduling
-
-##### ScheduleInterviews.jsx
-
-- **New Features**:
-  - Interview scheduling interface
-  - Interviewer availability matching
-  - Candidate selection system
-  - Conflict resolution
-- **Integration Points**:
-  - Interview management API
-  - Availability system
-  - Candidate profiles
-
-### Frontend Testing Framework
-
-#### Component Tests
-
-The application includes comprehensive tests for all major components:
-
-1. **Login Component Tests**
-
-   - Form validation
-   - Authentication flow
-   - UI rendering
-
-2. **JobPosting Component Tests**
-
-   - Form validation
-   - Job creation flow
-   - UI elements
-
-3. **Questionnaire Component Tests**
-
-   - Question management
-   - Option handling
-   - Form validation
-
-4. **Register Component Tests**
-
-   - User registration flow
-   - Role selection
-   - Form validation
-
-5. **ViewJobs Component Tests**
-
-   - Job listing
-   - Filtering functionality
-   - UI rendering
-
-6. **ShareJob Component Tests**
-
-   - Job sharing functionality
-   - Form generation
-   - UI elements
-
-7. **InterviewerCalendar Component Tests**
-   - Availability management
-   - Slot creation/deletion
-   - UI validation
-
-#### Test Infrastructure
-
-- Uses React Testing Library
-- Mock implementations for:
-  - localStorage
-  - fetch API
-  - Alert system
-- Comprehensive test coverage for:
-  - UI rendering
-  - User interactions
-  - Form validation
-  - Data handling
-
-## Technical Stack
-
-### Frontend
-
+# HireEasy - Job Application System
+
+HireEasy is a comprehensive job application management system that allows employers to create job listings, customize application forms, and track candidate submissions. The system includes an ATS (Applicant Tracking System) score calculator to help identify the best-fit candidates.
+
+## Features
+
+HireEasy is structured around two main user portals, each tailored to specific roles:
+
+### 1. HR Portal
+
+The HR Portal serves as the central hub for all recruitment activities. HR professionals use this portal to:
+
+- Create and manage job postings
+- Design custom application questionnaires
+- Share job opportunities with candidates
+- Review incoming applications
+- Schedule interviews with promising candidates
+- Track the entire hiring pipeline
+
+### 2. Interviewer Portal
+
+The Interviewer Portal focuses on the evaluation phase of the hiring process. Interviewers use this portal to:
+
+- Manage their professional profiles and expertise areas
+- Set their availability for conducting interviews
+- View their assigned interviews and candidate details
+- Provide structured feedback on candidates
+- Track interview outcomes
+
+
+
+## Detailed Component Descriptions
+
+### Authentication Components
+
+#### 1. Login
+**Purpose:** Provides user authentication functionality.  
+**Features:**
+- Email and password-based login
+- Role-based redirection (HR to HR dashboard, Interviewer to Interviewer dashboard)
+- Error handling and loading states
+- Navigation to registration for new users
+
+#### 2. Register
+**Purpose:** Allows new users to create accounts.  
+**Features:**
+- Registration form with validation
+- Role selection (HR or Interviewer)
+- Account creation with appropriate permissions
+- Redirection to login after successful registration
+
+### HR Components
+
+#### 3. Dashboard
+**Purpose:** Main navigation hub for HR professionals.  
+**Features:**
+- Central menu for accessing all HR functions
+- Navigation buttons for job management, questionnaires, applications, and interview scheduling
+- Clean, user-friendly interface
+
+#### 4. JobPosting
+**Purpose:** Enables HR to create and publish new job openings.  
+**Features:**
+- Form for creating detailed job descriptions
+- Fields for title, description, requirements, and other job details
+- Submission to backend API for storage
+- Validation of required fields
+
+#### 5. Questionnaire
+**Purpose:** Allows HR to create custom application forms and screening questionnaires.  
+**Features:**
+- Dynamic form builder for creating questions
+- Support for multiple question types (multiple choice, text, etc.)
+- Ability to edit and reorder questions
+- Form ID generation for linking forms to job postings
+
+#### 6. ShareJob
+**Purpose:** Facilitates sharing job postings with potential candidates.  
+**Features:**
+- Interface to select job postings and associate them with questionnaires
+- Generation of unique application links for candidates
+- Options for sharing methods (link, email, etc.)
+- Management of active shared job listings
+
+#### 7. ViewJobs
+**Purpose:** Provides an overview of all posted jobs.  
+**Features:**
+- List view of all created job postings
+- Filter functionality for job searches
+- Basic job statistics
+- Navigation to detailed job views
+
+#### 8. JobApplications
+**Purpose:** Manages incoming job applications.  
+**Features:**
+- List of all received applications
+- Filtering and sorting capabilities
+- Review interface for applications
+- Status management (new, reviewed, interview scheduled, etc.)
+
+#### 9. ScheduleInterviews
+**Purpose:** Facilitates the interview scheduling process.  
+**Features:**
+- Interface to match candidates with interviewers
+- Date and time selection based on availability
+- Email notification system
+- Interview status tracking
+
+### Interviewer Components
+
+#### 10. InterviewerDashboard
+**Purpose:** Main navigation hub for interviewers.  
+**Features:**
+- Access to profile management
+- Calendar viewing and availability setting
+- Interface for accessing scheduled interviews
+- Simple, focused design for interviewer needs
+
+#### 11. InterviewerProfile
+**Purpose:** Allows interviewers to manage their professional profiles.  
+**Features:**
+- Personal information management
+- Professional details and expertise areas
+- Availability preferences
+- Contact information updates
+
+#### 12. InterviewerCalendar
+**Purpose:** Manages interviewer availability scheduling.  
+**Features:**
+- Calendar interface for setting available time slots
+- Recurring availability options
+- Integration with scheduling system
+- View of upcoming scheduled interviews
+
+#### 13. InterviewerInterviews
+**Purpose:** Provides interviewers with access to their assigned interviews.  
+**Features:**
+- List of scheduled interviews
+- Candidate information and application details
+- Interview notes and feedback entry
+- Status updates for completed interviews
+
+### Applicant Components
+
+#### 14. Apply
+**Purpose:** Serves as the application interface for job seekers.  
+**Features:**
+- Job information display
+- Dynamic form rendering based on the associated questionnaire
+- File upload for resumes and supporting documents
+- Submission confirmation and tracking
+
+## Detailed Project Flow
+
+### 1. Authentication Flow
+
+Both portals begin with a common authentication path:
+
+1. **Login Page** (`Login`):
+   - Users enter credentials (email and password)
+   - The system validates credentials and determines user role
+   - Based on role, users are redirected to their respective dashboards
+   
+2. **Registration Page** (`Register`):
+   - New users create accounts by providing personal information
+   - Users select their role (HR or Interviewer)
+   - Account creation initiates with appropriate permissions
+   - Users are redirected to login after successful registration
+
+### 2. HR Portal Flow
+
+After authentication, the HR workflow follows this path:
+
+1. **HR Dashboard** (`Dashboard`):
+   - Central navigation hub with access to all HR functions
+   - Quick access buttons to key features
+
+2. **Job Posting** (`JobPosting`):
+   - HR creates detailed job descriptions
+   - Specifies title, requirements, responsibilities, and other key details
+   - Publishes listings to the job database
+
+3. **Questionnaire Creation** (`Questionnaire`):
+   - HR designs custom application forms
+   - Creates screening questions with various formats (multiple choice, text, etc.)
+   - Generates a unique form ID for linking to job postings
+
+4. **Job Sharing** (`ShareJob`):
+   - HR associates job postings with appropriate questionnaires
+   - Generates application links for candidates
+   - Manages distribution of job opportunities
+
+5. **Application Review** (`JobApplications`):
+   - HR views and evaluates incoming applications
+   - Filters applications by various criteria
+   - Reviews candidate qualifications and responses
+   - Marks promising candidates for interviews
+
+6. **Interview Scheduling** (`ScheduleInterviews`):
+   - HR matches candidates with appropriate interviewers
+   - Schedules interviews based on interviewer availability
+   - Sends notifications to all parties
+   - Tracks interview status
+
+7. **Job Monitoring** (`ViewJobs`):
+   - HR reviews all active job postings
+   - Tracks application statistics
+   - Updates or closes positions as needed
+
+### 3. Interviewer Portal Flow
+
+The interviewer workflow includes:
+
+1. **Interviewer Dashboard** (`InterviewerDashboard`):
+   - Main hub for interviewer activities
+   - Navigation to profile, calendar, and interview sections
+
+2. **Profile Management** (`InterviewerProfile`):
+   - Interviewers maintain their professional profiles
+   - Specify areas of expertise and qualifications
+   - Update contact information and preferences
+
+3. **Availability Setting** (`InterviewerCalendar`):
+   - Interviewers define their available time slots
+   - Set up recurring availability patterns
+   - View their already scheduled interviews
+   - Block out unavailable periods
+
+4. **Interview Management** (`InterviewerInterviews`):
+   - Access list of assigned interviews
+   - Review candidate information before interviews
+   - Enter feedback and evaluation after interviews
+   - Update interview status (completed, rescheduled, etc.)
+
+### 4. Candidate Flow
+
+While not a separate portal, candidates interact with the system through:
+
+1. **Application Process** (`Apply`):
+   - Candidates access job listings through shared links
+   - View job details and requirements
+   - Complete the questionnaire specific to that position
+   - Upload supporting documents
+   - Submit applications and receive confirmation
+
+2. **Post-Application**:
+   - Candidates may receive notifications about their application status
+   - Interview invitations are sent if selected
+   - Scheduling confirmations are provided
+
+## System Architecture
+
+The application consists of:
+
+- **Backend**: Go server with Gin framework
+- **Database**: PostgreSQL
+- **Storage**: AWS S3 for resume storage
+- **Frontend**: React for components along with Cypress for testing
+
+## Database Structure
+
+- **users**: Store user information (employers and applicants)
+- **jobs**: Job listings with details
+- **form_templates**: Customizable application forms for each job
+- **job_submissions**: Applications submitted by candidates
+- **job_applications**: Detailed application information
+
+## Running the Application
+
+
+### Prerequisites
+
+- Go 1.16 or newer
+- PostgreSQL database
+- AWS account (for S3 storage)
 - React.js
 - React Router
-- Testing Library
-- Tailwind CSS
+- Cypress
+- Jest
+- React Testing Library 
 
-### Backend
+## Setup Instructions
 
-- Go
-- Gin Framework
-- PostgreSQL
-- JWT Authentication
+1. Clone the repository:
+   ```
+   git clone https://github.com/ChiranjeeviSingh/HireEasy/blob/main/backend/README.md
+   ```
 
-## Getting Started
-
-### Frontend Setup
-
-1. Clone the repository
-2. Install dependencies:
+2. Install frontend dependencies**:
    ```bash
    cd frontend
    npm install
    ```
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-4. Start the development server:
+
+3. Start the frontend server**:
    ```bash
    npm start
    ```
 
-### Backend Setup
-
-1. Navigate to backend directory
-2. Set up environment variables
-3. Run the server:
-   ```bash
-   go run cmd/server/main.go
+4. Navigate to the backend directory:
+   ```
+   cd HireEasy/backend
    ```
 
-### Running Tests
+5. Install dependencies:
+   ```
+   go mod tidy
+   ```
 
-```bash
-# Frontend Tests
-cd frontend
-npm test
+6. Set up the PostgreSQL database using the provided schema:
+   ```
+   psql -U <username> -d <database> -f internal/database/migrations/schema.sql
+   ```
 
-# Backend Tests
-cd backend
-go test -v ./...
-```
 
-## Security Features
+7. Setup Environment Variables:
 
-- JWT-based authentication
-- Role-based access control
-- Secure data transmission
-- Input validation
-- XSS protection
+  ```bash
+  # PostgreSQL Configuration
+  DB_HOST=localhost
+  DB_PORT=5432
+  DB_USER=your_username
+  DB_PASSWORD=your_password
+  DB_NAME=app_db
+  ```
 
-## Performance Considerations
+  Optional Test Mode Configuration: Set to "true" to bypass actual S3 uploads
+  ```bash
+  S3_TEST_MODE=true
+  ```
 
-- Lazy loading of components
-- Optimized API calls
-- Efficient state management
-- Responsive design
-- Database indexing
-- Caching strategies
+8. Run the backend application:
+  ```bash
+  export TEST_MODE=false S3_TEST_MODE=false \
+  AWS_REGION=us-east-1 \
+  S3_BUCKET=hireeasy-resumes \
+  DB_USER=reshma \
+  DB_PASSWORD=postgres \
+  && go run cmd/server/main.go
+  ```
+
+## Testing
+
+1. Run backend unittests:
+   ```
+   go test ./test/handlers/ -v
+   ```
+
+2. Frontend Testing:
+  The project includes both unit tests (using Jest and React Testing Library) and end-to-end tests (using Cypress).
+
+  ### Unit Tests
+  Unit tests focus on individual components and functionality.
+  ```
+  npm test
+  ```
+
+  ### E2E Tests
+  End-to-end tests simulate real user interactions with the application.
+  ```
+  npm run cypress:run
+  ```
+
+## Troubleshooting
+
+### S3 Upload Issues
+
+If you encounter "MissingRegion" errors:
+1. Ensure AWS_REGION is properly set
+2. Verify AWS credentials are valid
+3. Consider using S3_TEST_MODE=true for testing without S3 uploads
+
+### Database Connection Issues
+
+If you encounter database connection errors:
+1. Verify PostgreSQL is running
+2. Check database credentials
+3. Ensure database and required tables exist
 
 ## API Documentation
-
 For more details on API endpoints, please refer to the [Backend Documentation](https://documenter.getpostman.com/view/41938964/2sB2cRCQ89).
 
 ## Video Demo
-
-[Sprint 4 Demo Video](https://youtu.be/demo-link)
-
-## Future Enhancements
-
-1. Real-time notifications
-2. Advanced analytics
-3. Integration with external ATS
-4. Enhanced reporting features
-5. Mobile application support
-
-## Contributing
-
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE.md file for details.
+https://drive.google.com/file/d/1d_vLmrg_KtDIHsXMdqdsa0sBlKxAti-v/view?usp=sharing
